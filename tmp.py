@@ -1,72 +1,54 @@
-import numpy as np
-from torch.utils.data.dataset import Dataset
 import pickle
-import os
-from scipy import signal
-import torch
 
-if torch.cuda.is_available():
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-else:
-    torch.set_default_tensor_type('torch.FloatTensor')
+import numpy as np
 
 
-############################################################################################
-# This file provides basic processing script for the multimodal datasets we use. For other
-# datasets, small modifications may be needed (depending on the type of the data, etc.)
-############################################################################################
+# 函数用于读取FASTA格式的文件并返回一个序列字典
+# 在read_fasta_file函数中添加打印语句
+def read_fasta_file(fasta_file):
+    sequences = {}
+    with open(fasta_file, 'r') as file:
+        sequence_id = None
+        sequence = ''
+        for line in file:
+            line = line.strip()
+            if line.startswith('>'):
+                if sequence_id is not None:
+                    sequences[sequence_id] = sequence
+                    print(f"Complete sequence for ID {sequence_id}: {sequence}")  # 打印完整序列
+                sequence_id = line[1:]
+                sequence = ''
+            else:
+                sequence += line
+        if sequence_id is not None:
+            sequences[sequence_id] = sequence
+            print(f"Complete sequence for ID {sequence_id}: {sequence}")  # 打印最后一个完整序列
+    return sequences
 
 
-class Multimodal_Datasets(Dataset):
-    def __init__(self, dataset_path, data='mosei_senti', split_type='train', if_align=False):
-        super(Multimodal_Datasets, self).__init__()
-        dataset_path = os.path.join(dataset_path)
-        dataset = pickle.load(open(dataset_path, 'rb'))
-
-        # These are torch tensors
-        self.vision = torch.tensor(dataset[split_type]['vision'].astype(np.float32)).cpu().detach()
-        self.text = torch.tensor(dataset[split_type]['text'].astype(np.float32)).cpu().detach()
-        self.audio = dataset[split_type]['audio'].astype(np.float32)
-        self.audio[self.audio == -np.inf] = 0
-        self.audio = torch.tensor(self.audio).cpu().detach()
-        self.labels = torch.tensor(dataset[split_type]['labels'].astype(np.float32)).cpu().detach()
-
-        # Note: this is STILL an numpy array
-        self.meta = dataset[split_type]['id'] if 'id' in dataset[split_type].keys() else None
-
-        self.data = data
-
-        self.n_modalities = 3  # vision/ text/ audio
-
-    def get_n_modalities(self):
-        return self.n_modalities
-
-    def get_seq_len(self):
-        return self.text.shape[1], self.audio.shape[1], self.vision.shape[1]
-
-    def get_dim(self):
-        return self.text.shape[2], self.audio.shape[2], self.vision.shape[2]
-
-    def get_lbl_info(self):
-        # return number_of_labels, label_dim
-        return self.labels.shape[1], self.labels.shape[2]
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, index):
-        X = (index, self.text[index], self.audio[index], self.vision[index])
-        Y = self.labels[index]
-        META = (0, 0, 0) if self.meta is None else (self.meta[index][0], self.meta[index][1], self.meta[index][2])
-        if self.data == 'mosi':
-            META = (self.meta[index][0].decode('UTF-8'), self.meta[index][1].decode('UTF-8'),
-                    self.meta[index][2].decode('UTF-8'))
-        if self.data == 'iemocap':
-            Y = torch.argmax(Y, dim=-1)
-        return X, Y, META
+# 读取原始序列
+ori_seqs = read_fasta_file('./data/seq260all_ori_seqs_tmp.fasta')
+print(list(ori_seqs.items()))
 
 
-# 使用示例
-dataset_path = './data/mosi_data_noalign.pkl'
-sequence_dataset = Multimodal_Datasets(dataset_path)
-print(sequence_dataset.text)
+# 用于DNA序列的one-hot编码
+def one_hot_encode_dna(sequence):
+    # print(sequence)  # 输出调试
+    # 定义碱基到索引的映射
+    base_to_index = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+    # 创建与序列长度相等的one-hot编码矩阵，每个碱基对应一个长度为4的向量
+    one_hot_sequence = np.zeros((len(sequence), 4))
+    for i, base in enumerate(sequence):
+        if base in base_to_index:
+            one_hot_sequence[i, base_to_index[base]] = 1
+    return one_hot_sequence
+
+
+# 对每个序列使用one_hot_encode_dna函数进行编码
+# encoded_ori_seqs = {seq_id: [one_hot_encode_dna(seq) for seq in seqs] for seq_id, seqs in ori_seqs.items()}
+# Assuming ori_seqs is a dictionary with sequence IDs as keys and complete DNA sequences as values
+encoded_ori_seqs = {}
+for seq_id, seq in ori_seqs.items():
+    print(f"Encoding sequence for ID {seq_id}: {seq}")  # Debug print to check what is being encoded
+    encoded_ori_seqs[seq_id] = one_hot_encode_dna(seq)
+print(list(encoded_ori_seqs.items()))
