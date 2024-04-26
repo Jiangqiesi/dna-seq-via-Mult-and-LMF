@@ -43,6 +43,7 @@ parser.add_argument('--out_dropout', type=float, default=0.0,
                     help='output layer dropout')
 
 # Architecture
+# TODO: 待定nlevels, num_heads
 parser.add_argument('--nlevels', type=int, default=5,
                     help='number of layers in the network (default: 5)')
 parser.add_argument('--num_heads', type=int, default=5,
@@ -145,9 +146,10 @@ hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_data), len
 hyp_params.model = str.upper(args.model.strip())
 hyp_params.output_dim = output_dim_dict.get(dataset, 1)
 hyp_params.criterion = criterion_dict.get(dataset, 'L1Loss')
-# 修改超参数 注意对应dataset类的函数返回值
+# TODO:修改超参数 注意对应dataset类的函数返回值
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
 hyp_params.c_len, hyp_params.q_len, hyp_params.v_len = train_data.get_seq_len()
+# output_dim criterion待修改
 
 
 if __name__ == '__main__':
