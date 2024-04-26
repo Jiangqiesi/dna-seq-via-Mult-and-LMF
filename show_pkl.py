@@ -2,8 +2,8 @@
 
 import pickle
 
-path = './data/X_c.pkl'  # path='/root/……/aus_openface.pkl'   pkl文件所在路径
-file_path = './data/X_c.txt'
+path = './data/X_q.pkl'  # path='/root/……/aus_openface.pkl'   pkl文件所在路径
+file_path = './data/X_q.txt'
 
 # f = open(path, 'rb')
 # data = pickle.load(f)
