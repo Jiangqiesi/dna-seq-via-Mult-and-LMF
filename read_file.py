@@ -15,7 +15,7 @@ def read_fasta_file(fasta_file):
             if line.startswith('>'):
                 if sequence_id is not None:
                     sequences[sequence_id] = sequence
-                sequence_id = line[1:]  # 移除 '>'
+                sequence_id = int(line[1:])  # 移除 '>'
                 sequence = ''
             else:
                 sequence += line
@@ -65,7 +65,6 @@ quals = read_qual_file('./data/seq260all_quas.fasta')
 
 
 # 数据预处理和整合的示例
-# TODO: 实现具体的编码和归一化逻辑
 # copy自read_data.py
 # 用于DNA序列的one-hot编码
 def one_hot_encode_dna(sequence):
