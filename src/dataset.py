@@ -59,8 +59,11 @@ class Multimodal_Datasets(Dataset):
 
 
 class multiseqs_datasets(Dataset):
-    def __init__(self, dataset_path='./data/', data1='encoded_ori_seqs.pkl', data2='X_c.pkl', data3='X_q.pkl', split_type='train'):
+    def __init__(self, dataset_path='data', data='dna', split_type='train', if_align=False):
         super(multiseqs_datasets, self).__init__()
+        data1 = 'encoded_ori_seqs.pkl'
+        data2 = 'X_c.pkl'
+        data3 = 'X_q.pkl'
         data1 = os.path.join(dataset_path, data1)
         dataset1 = pickle.load(open(data1, 'rb'))
         data2 = os.path.join(dataset_path, data2)
@@ -68,32 +71,21 @@ class multiseqs_datasets(Dataset):
         data3 = os.path.join(dataset_path, data3)
         dataset3 = pickle.load(open(data3, 'rb'))
 
-        # self.seqs = torch.tensor(dataset2.astype(np.float32)).cpu().detach()
-        self.seqs = {}
-        for key, value in dataset2.items():
-            try:
-                converted = torch.tensor(value.astype(np.float32)).cpu().detach()
-                self.seqs[key] = converted
-            except AttributeError:
-                print(f"Warning: Item {key} skipped as it does not support astype operation")
-
-        # self.quas = torch.tensor(dataset3.astype(np.float32)).cpu().detach()
-        # self.ori_seqs = torch.tensor(dataset1.astype(np.float32)).cpu().detach()
-        self.quas = {}
-        for key, value in dataset3.items():
-            try:
-                converted = torch.tensor(value.astype(np.float32)).cpu().detach()
-                self.quas[key] = converted
-            except AttributeError:
-                print(f"Warning: Item {key} skipped as it does not support astype operation")
-
-        self.ori_seqs = {}
-        for key, value in dataset1.items():
-            try:
-                converted = torch.tensor(value.astype(np.float32)).cpu().detach()
-                self.ori_seqs[key] = converted
-            except AttributeError:
-                print(f"Warning: Item {key} skipped as it does not support astype operation")
+        if split_type == 'train':
+            dataset1 = dataset1[:int(0.6 * len(dataset1))]
+            dataset2 = dataset2[:int(0.6 * len(dataset2))]
+            dataset3 = dataset3[:int(0.6 * len(dataset3))]
+        elif split_type == 'test':
+            dataset1 = dataset1[int(0.6 * len(dataset1)):]
+            dataset2 = dataset2[int(0.6 * len(dataset2)):]
+            dataset3 = dataset3[int(0.6 * len(dataset3)):]
+        elif split_type == 'valid':
+            dataset1 = dataset1[:int(0.6 * len(dataset1))]
+            dataset2 = dataset2[:int(0.6 * len(dataset2))]
+            dataset3 = dataset3[:int(0.6 * len(dataset3))]
+        self.seqs = torch.tensor(dataset2.astype(np.float32)).cpu().detach()
+        self.quas = torch.tensor(dataset3.astype(np.float32)).cpu().detach()
+        self.ori_seqs = torch.tensor(dataset1.astype(np.float32)).cpu().detach()
 
         self.data1 = data1
         self.data2 = data2
@@ -105,10 +97,10 @@ class multiseqs_datasets(Dataset):
         return self.n_modalities
 
     def get_seq_len(self):
-        return self.seqs.shape[1], self.quas.shape[1]
+        return self.seqs.shape[1], self.quas.shape[1], self.ori_seqs.shape[0]
 
     def get_dim(self):
-        return self.seqs.shape[2], self.quas.shape[2]
+        return self.seqs.shape[2], self.quas.shape[2],  self.ori_seqs.shape[1]
 
     def __len__(self):
         return self.ori_seqs.shape[0]

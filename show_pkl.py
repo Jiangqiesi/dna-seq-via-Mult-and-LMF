@@ -2,8 +2,8 @@
 
 import pickle
 
-path = './X_q.pkl'  # path='/root/……/aus_openface.pkl'   pkl文件所在路径
-file_path = './X_q.txt'
+path = './encoded_ori_seqs.pkl'  # path='/root/……/aus_openface.pkl'   pkl文件所在路径
+file_path = './encoded_ori_seqs.txt'
 
 # f = open(path, 'rb')
 # data = pickle.load(f)

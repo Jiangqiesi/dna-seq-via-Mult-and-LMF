@@ -18,8 +18,8 @@ def read_fasta_file(fasta_file):
                 sequence_id = int(line[1:])  # 移除 '>'
                 # sequence = ''
             else:
-                nested_list = ast.literal_eval(line)
-                sequences[sequence_id] = nested_list
+                # nested_list = ast.literal_eval(line)
+                sequences[sequence_id] = line
         # if sequence_id is not None:
         #     sequences[sequence_id] = sequence  # 添加最后一个序列
     return sequences
@@ -52,16 +52,15 @@ def read_qual_file(qual_file):
 
 
 # 读取原始序列
-# ori_seqs = read_fasta_file('./data/seq260all_ori_seqs.fasta')
+ori_seqs = read_fasta_file('./data/seq260all_ori_seqs.fasta')
 # print(ori_seqs[0])
 
 # 读取高拷贝序列
-high_copy_seqs = read_fasta_file('./data/seq260all_seqs.fasta')
-
-# 读取质量值
-quals = read_qual_file('./data/seq260all_quas.fasta')
-print(quals[0][0])
-
+# high_copy_seqs = read_fasta_file('./data/seq260all_seqs.fasta')
+#
+# # 读取质量值
+# quals = read_qual_file('./data/seq260all_quas.fasta')
+# print(quals[0][1])
 # print(ori_seqs, high_copy_seqs, quals)
 # print(list(ori_seqs.items())[0])
 # print(list(high_copy_seqs.items())[0])
@@ -98,14 +97,6 @@ def integrate_data(high_copy_seqs, quals):
     # 遍历高拷贝序列，将它们和对应的质量分数整合到一起
     for seq_id in high_copy_seqs.keys():
 
-        # if not flag:
-        #     print("seq list type:", type(high_copy_seqs[seq_id]))
-        #     flag = True
-        # seq_list = ast.literal_eval(high_copy_seqs[seq_id])
-        # for seq in seq_list:
-        #     if not flag:
-        #         print("seq:", seq)
-        #         flag = True
         encoded_seqs = [one_hot_encode_dna(seq) for seq in high_copy_seqs[seq_id]]
         # 对每个质量分数进行归一化
         normalized_quals = [normalize_quality_scores(q) for q in quals[seq_id]]
@@ -115,22 +106,71 @@ def integrate_data(high_copy_seqs, quals):
         X_q[seq_id] = []
 
         for encoded_seq, qual in zip(encoded_seqs, normalized_quals):
-            if not flag:
-                print(f"Seq ID: {seq_id}, Encoded Length: {len(encoded_seq)}, Qual Length: {len(qual)}")  # 调试输出
-                flag = True
+            # if not flag:
+            #     print(f"Seq ID: {seq_id}, Encoded Length: {len(encoded_seq)}, Qual Length: {len(qual)}")  # 调试输出
+            #     flag = True
             # if len(encoded_seq) == len(qual):
             X_c[seq_id].append(encoded_seq)
             X_q[seq_id].append(qual)
             # else:
             #     print(f"Mismatch found in Seq ID: {seq_id}")  # 发现长度不匹配时打印
-    return X_c, X_q
+    # find the maximum length of sequences
+    max_len_c_1 = max(len(seq) for seq in X_c.values())
+    max_len_q_1 = max(len(seq) for seq in X_q.values())
+    max_len_c_2 = 0
+    for id_of_list_c in X_c.keys():
+        for i in X_c[id_of_list_c]:
+            if len(i) > max_len_c_2:
+                max_len_c_2 = len(i)
+    max_len_q_2 = 0
+    for id_of_list_q in X_q.keys():
+        for i in X_q[id_of_list_q]:
+            if len(i) > max_len_q_2:
+                max_len_q_2 = len(i)
+    final_x_c = np.zeros((len(X_c), max_len_c_1, max_len_c_2, 4))
+    final_x_q = np.zeros((len(X_q), max_len_q_1, max_len_q_2))
+    # for i, (seq_id, seqs) in enumerate(X_c.items()):
+    #     # final_x_c[i] = np.concatenate(seqs)
+    #     for j, seq in enumerate(seqs):
+    #         final_x_c[i][j] = seq
+    for i, (seq_id, seqs) in enumerate(X_q.items()):
+        # final_x_q[i] = np.concatenate(seqs)
+        for j, seq in enumerate(seqs):
+            # final_x_q[i][j] = seq
+            for k, char in enumerate(seq):
+                final_x_q[i][j][k] = char
+    for i, (seq_id, seqs) in enumerate(X_c.items()):
+        # final_x_c[i] = np.concatenate(seqs)
+        for j, seq in enumerate(seqs):
+            # final_x_c[i][j] = seq
+            for k, encoded_str in enumerate(seq):
+                final_x_c[i][j][k] = encoded_str
+    return final_x_c, final_x_q
+
+
+def integrate_ori(seqs_dirt):
+    X_ori = {}
+    encoded_ori_seqs = {seq_id: [one_hot_encode_dna(seq) for seq in seqs] for seq_id, seqs in seqs_dirt.items()}
+    for seq_id, seq in seqs_dirt.items():
+        X_ori[seq_id] = one_hot_encode_dna(seq)
+    max_len = max(len(seq) for seq in X_ori.values())
+    final_x_ori = np.zeros((len(X_ori), max_len, 4))
+    for i, (seq_id, seq) in enumerate(X_ori.items()):
+        for j, encoded_str in enumerate(seq):
+            final_x_ori[i][j] = encoded_str
+    return final_x_ori
 
 
 # 预处理并整合数据
-X_c, X_q = integrate_data(high_copy_seqs, quals)
+# X_c, X_q = integrate_data(high_copy_seqs, quals)
 # 对每个序列使用one_hot_encode_dna函数进行编码
-# encoded_ori_seqs = {seq_id: [one_hot_encode_dna(seq) for seq in seqs] for seq_id, seqs in ori_seqs.items()}
-print(list(X_c.items())[0])
+encoded_ori_seqs = integrate_ori(ori_seqs)
+print(encoded_ori_seqs[0])
+# print(list(X_c.items())[0])
+# type_x_c = type(X_c[0])
+# type_x_q = type(X_q[0])
+# print(type_x_c)
+# print(type_x_q)
 
 
 # 保存为pickle文件
@@ -139,6 +179,6 @@ def save_to_pickle(data, filename):
         pickle.dump(data, file)
 
 
-save_to_pickle(X_c, 'X_c.pkl')
-save_to_pickle(X_q, 'X_q.pkl')
-# save_to_pickle(encoded_ori_seqs, 'encoded_ori_seqs.pkl')
+# save_to_pickle(X_c, 'X_c.pkl')
+# save_to_pickle(X_q, 'X_q.pkl')
+save_to_pickle(encoded_ori_seqs, 'encoded_ori_seqs.pkl')
