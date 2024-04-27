@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from modules.transformer import TransformerEncoder
+from modules.LMF import LMF
 
 
 class MULTModel(nn.Module):
@@ -10,6 +11,7 @@ class MULTModel(nn.Module):
         """
         Construct a MulT model.
         """
+        # TODO: 跨膜transformer输入出错，其中一个输入应当为LMF后的X_f
         super(MULTModel, self).__init__()
         # self.orig_d_l, self.orig_d_a, self.orig_d_v = hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v
         self.orig_d_c, self.orig_d_q, self.orig_d_f = hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f
@@ -28,6 +30,7 @@ class MULTModel(nn.Module):
         self.out_dropout = hyp_params.out_dropout
         self.embed_dropout = hyp_params.embed_dropout
         self.attn_mask = hyp_params.attn_mask
+        self.rank = hyp_params.rank
 
         # combined_dim = self.d_l + self.d_a + self.d_v
         combined_dim = self.d_c + self.d_q
@@ -40,6 +43,16 @@ class MULTModel(nn.Module):
 
         output_dim = hyp_params.output_dim  # This is actually not a hyperparameter :-)
 
+        # 一：先LMF
+        # 对应参数
+        input_dims = (self.orig_d_c, self.orig_d_q)
+        hidden_dims = (self.d_c, self.d_q)
+        text_out = self.d_f // 2
+        dropouts = self.embed_dropout
+        # TODO: output_dim待商榷
+        self.LMF_f_with_cq = LMF(input_dims, hidden_dims, text_out, dropouts, output_dim, self.rank)
+
+        # 二：再跨膜transformer
         # 1. Temporal convolutional layers
         self.proj_c = nn.Conv1d(self.orig_d_c, self.d_c, kernel_size=1, padding=0, bias=False)
         self.proj_q = nn.Conv1d(self.orig_d_q, self.d_q, kernel_size=1, padding=0, bias=False)
@@ -47,9 +60,9 @@ class MULTModel(nn.Module):
         # 2. Crossmodal Attentions
         # lonly --> x_c; aonly  --> x_q
         if self.lonly:
-            self.trans_c_with_q = self.get_network(self_type='cq')
+            self.trans_c_with_f = self.get_network(self_type='cf')
         if self.aonly:
-            self.trans_q_with_c = self.get_network(self_type='qc')
+            self.trans_q_with_f = self.get_network(self_type='qf')
 
         # 3. Self Attentions (Could be replaced by LSTMs, GRUs, etc.)
         #    [e.g., self.trans_x_mem = nn.LSTM(self.d_x, self.d_x, 1)
@@ -64,9 +77,9 @@ class MULTModel(nn.Module):
         self.out_layer = nn.Linear(combined_dim, output_dim)
 
     def get_network(self, self_type='c', layers=-1):
-        if self_type == 'cq':
+        if self_type in ['cq', 'cf']:
             embed_dim, attn_dropout = self.d_c, self.attn_dropout
-        elif self_type == 'qc':
+        elif self_type in ['qc', 'qf']:
             embed_dim, attn_dropout = self.d_q, self.attn_dropout
         elif self_type == 'c_mem':
             embed_dim, attn_dropout = 2 * self.d_c, self.attn_dropout
@@ -91,9 +104,12 @@ class MULTModel(nn.Module):
         转置操作: 输入数据首先被转置到 [batch_size, n_features, seq_len]，以适配后续操作。
         应用Dropout: 在文本数据x_l上应用dropout以防止过拟合，其中self.embed_dropout是dropout比例。
         """
-        # TODO: 可能有些地方要改
+        # TODO: 可能有些地方要改，比如是否要先LMF再转置
         x_c = F.dropout(x_c.transpose(1, 2), p=self.embed_dropout, training=self.training)
         x_q = x_q.transpose(1, 2)
+
+        # 在这里先进行LMF
+        x_f = self.LMF_f_with_cq(x_c, x_q)
 
         # Project the textual/visual/audio features
         # 特征投影
@@ -112,12 +128,12 @@ class MULTModel(nn.Module):
         # 例如，如果lonly为真，模型将只使用文本信息，但在处理文本信息时，会考虑音频和视觉信息的影响。
         # 融合来自不同模态影响的特征后，再通过一个记忆转换层（如self.trans_l_mem）进行进一步的处理。
         # 我们不根据配置
-        h_c_with_q = self.trans_c_with_q(proj_x_c, proj_x_q, proj_x_q)
-        h_c = self.trans_c_mem(h_c_with_q)
+        h_c_with_f = self.trans_c_with_f(proj_x_c, x_f, x_f)
+        h_c = self.trans_c_mem(h_c_with_f)
         last_h_c = h_c[-1]
 
-        h_q_with_c = self.trans_q_with_c(proj_x_q, proj_x_c, proj_x_c)
-        h_q = self.trans_q_mem(h_q_with_c)
+        h_q_with_f = self.trans_q_with_f(proj_x_q, x_f, x_f)
+        h_q = self.trans_q_mem(h_q_with_f)
         last_h_q = h_q[-1]
         # 聚合和预测
         # 聚合不同模态: 结合所有两种模态的信息，将它们最后的隐藏状态（last_h_x）进行拼接。

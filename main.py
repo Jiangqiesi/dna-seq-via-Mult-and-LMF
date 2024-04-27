@@ -1,3 +1,5 @@
+import random
+
 import torch
 import argparse
 from src.utils import *
@@ -134,6 +136,9 @@ if not args.aligned:
 #
 ####################################################################
 
+params = dict()
+params['rank'] = [1, 4, 8, 16]
+
 hyp_params = args
 hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v = train_data.get_dim()
 hyp_params.l_len, hyp_params.a_len, hyp_params.v_len = train_data.get_seq_len()
@@ -149,6 +154,7 @@ hyp_params.criterion = criterion_dict.get(dataset, 'L1Loss')
 # TODO:修改超参数 注意对应dataset类的函数返回值
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
 hyp_params.c_len, hyp_params.q_len, hyp_params.v_len = train_data.get_seq_len()
+hyp_params.rank = random.choice(params['rank'])
 # output_dim criterion待修改
 
 
