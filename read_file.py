@@ -9,18 +9,19 @@ def read_fasta_file(fasta_file):
     sequences = {}
     with open(fasta_file, 'r') as file:
         sequence_id = None
-        sequence = ''
+        # sequence = []
         for line in file:
             line = line.strip()
             if line.startswith('>'):
-                if sequence_id is not None:
-                    sequences[sequence_id] = sequence
+                # if sequence_id is not None:
+                #     sequences[sequence_id] = sequence
                 sequence_id = int(line[1:])  # 移除 '>'
-                sequence = ''
+                # sequence = ''
             else:
-                sequence += line
-        if sequence_id is not None:
-            sequences[sequence_id] = sequence  # 添加最后一个序列
+                nested_list = ast.literal_eval(line)
+                sequences[sequence_id] = nested_list
+        # if sequence_id is not None:
+        #     sequences[sequence_id] = sequence  # 添加最后一个序列
     return sequences
 
 
@@ -29,35 +30,37 @@ def read_qual_file(qual_file):
     quality_scores = {}
     with open(qual_file, 'r') as file:
         sequence_id = None
-        quality_score_list = []
+        # quality_score_list = []
         for line in file:
             line = line.strip()
             if line.startswith('>'):
-                if sequence_id is not None:
-                    quality_scores[sequence_id] = quality_score_list
-                sequence_id = line[1:]  # 移除 '>'
-                quality_score_list = []
+                # if sequence_id is not None:
+                #     quality_scores[sequence_id] = quality_score_list
+                sequence_id = int(line[1:])  # 移除 '>'
+                # quality_score_list = []
             else:
                 # 清理方括号
-                cleaned_line = line.strip('[] \n')
-                # 假设质量值已经是以逗号分隔的数值
-                quality_scores_list = [int(q) for q in cleaned_line.split(',') if q.strip().isdigit()]
-                quality_score_list.append(quality_scores_list)
-        if sequence_id is not None:
-            quality_scores[sequence_id] = quality_score_list  # 添加最后一组质量值
+                # cleaned_line = line.strip('[] \n')
+                # # 假设质量值已经是以逗号分隔的数值
+                # quality_scores_list = [int(q) for q in cleaned_line.split(',') if q.strip().isdigit()]
+                # quality_score_list.append(quality_scores_list)
+                nested_list = ast.literal_eval(line)
+                quality_scores[sequence_id] = nested_list
+        # if sequence_id is not None:
+        #     quality_scores[sequence_id] = quality_score_list  # 添加最后一组质量值
     return quality_scores
 
 
 # 读取原始序列
 # ori_seqs = read_fasta_file('./data/seq260all_ori_seqs.fasta')
+# print(ori_seqs[0])
 
 # 读取高拷贝序列
 high_copy_seqs = read_fasta_file('./data/seq260all_seqs.fasta')
 
 # 读取质量值
 quals = read_qual_file('./data/seq260all_quas.fasta')
-
-
+# print(quals[0][1])
 # print(ori_seqs, high_copy_seqs, quals)
 # print(list(ori_seqs.items())[0])
 # print(list(high_copy_seqs.items())[0])
@@ -94,16 +97,7 @@ def integrate_data(high_copy_seqs, quals):
     # 遍历高拷贝序列，将它们和对应的质量分数整合到一起
     for seq_id in high_copy_seqs.keys():
 
-        # if not flag:
-        #     print("seq list type:", type(high_copy_seqs[seq_id]))
-        #     flag = True
-        seq_list = ast.literal_eval(high_copy_seqs[seq_id])
-        # for seq in seq_list:
-        #     if not flag:
-        #         print("seq:", seq)
-        #         flag = True
-
-        encoded_seqs = [one_hot_encode_dna(seq) for seq in seq_list]
+        encoded_seqs = [one_hot_encode_dna(seq) for seq in high_copy_seqs[seq_id]]
         # 对每个质量分数进行归一化
         normalized_quals = [normalize_quality_scores(q) for q in quals[seq_id]]
 
@@ -112,22 +106,67 @@ def integrate_data(high_copy_seqs, quals):
         X_q[seq_id] = []
 
         for encoded_seq, qual in zip(encoded_seqs, normalized_quals):
-            if not flag:
-                print(f"Seq ID: {seq_id}, Encoded Length: {len(encoded_seq)}, Qual Length: {len(qual)}")  # 调试输出
-                flag = True
+            # if not flag:
+            #     print(f"Seq ID: {seq_id}, Encoded Length: {len(encoded_seq)}, Qual Length: {len(qual)}")  # 调试输出
+            #     flag = True
             # if len(encoded_seq) == len(qual):
             X_c[seq_id].append(encoded_seq)
             X_q[seq_id].append(qual)
             # else:
             #     print(f"Mismatch found in Seq ID: {seq_id}")  # 发现长度不匹配时打印
-    return X_c, X_q
+    # find the maximum length of sequences
+    max_len_c_1 = max(len(seq) for seq in X_c.values())
+    max_len_q_1 = max(len(seq) for seq in X_q.values())
+    max_len_c_2 = 0
+    for id_of_list_c in X_c.keys():
+        for i in X_c[id_of_list_c]:
+            if len(i) > max_len_c_2:
+                max_len_c_2 = len(i)
+    max_len_q_2 = 0
+    for id_of_list_q in X_q.keys():
+        for i in X_q[id_of_list_q]:
+            if len(i) > max_len_q_2:
+                max_len_q_2 = len(i)
+    final_x_c = np.zeros((len(X_c), max_len_c_1, max_len_c_2, 4))
+    final_x_q = np.zeros((len(X_q), max_len_q_1, max_len_q_2))
+    # for i, (seq_id, seqs) in enumerate(X_c.items()):
+    #     # final_x_c[i] = np.concatenate(seqs)
+    #     for j, seq in enumerate(seqs):
+    #         final_x_c[i][j] = seq
+    for i, (seq_id, seqs) in enumerate(X_q.items()):
+        # final_x_q[i] = np.concatenate(seqs)
+        for j, seq in enumerate(seqs):
+            # final_x_q[i][j] = seq
+            for k, char in enumerate(seq):
+                final_x_q[i][j][k] = char
+    for i, (seq_id, seqs) in enumerate(X_c.items()):
+        # final_x_c[i] = np.concatenate(seqs)
+        for j, seq in enumerate(seqs):
+            # final_x_c[i][j] = seq
+            for k, encoded_str in enumerate(seq):
+                final_x_c[i][j][k] = encoded_str
+    # arr_x_c = []
+    # arr_x_q = []
+    # for key, nested_list in X_c.items():
+    #     arr_x_c.append(nested_list)
+    # for key, nested_list in X_q.items():
+    #     arr_x_q.append(nested_list)
+    # max_len_q = max(len(seq) for seq in arr_x_q)
+    # padded_arr_x_q = [np.pad(seq, (0, max_len_q - len(seq)), mode='constant') for seq in arr_x_q]
+    # final_x_q = np.stack(padded_arr_x_q, axis=0)
+    # final_x_c = np.stack(arr_x_c, axis=0)
+    return final_x_c, final_x_q
 
 
 # 预处理并整合数据
 X_c, X_q = integrate_data(high_copy_seqs, quals)
 # 对每个序列使用one_hot_encode_dna函数进行编码
 # encoded_ori_seqs = {seq_id: [one_hot_encode_dna(seq) for seq in seqs] for seq_id, seqs in ori_seqs.items()}
-print(list(X_c.items())[0])
+# print(list(X_c.items())[0])
+type_x_c = type(X_c[0])
+type_x_q = type(X_q[0])
+print(type_x_c)
+print(type_x_q)
 
 
 # 保存为pickle文件
