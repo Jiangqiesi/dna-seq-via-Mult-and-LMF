@@ -33,6 +33,7 @@ class SubNet(nn.Module):
         Args:
             x: tensor of shape (batch_size, in_size)
         '''
+        print("Input shape to BatchNorm:", x.shape)
         normed = self.norm(x)
         dropped = self.drop(normed)
         y_1 = F.relu(self.linear_1(dropped))
@@ -59,8 +60,9 @@ class TextSubNet(nn.Module):
             (return value in forward) a tensor of shape (batch_size, out_size)
         '''
         super(TextSubNet, self).__init__()
-        self.rnn = nn.LSTM(in_size, hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional, batch_first=True)
+        self.rnn = nn.LSTM(in_size, hidden_size=hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional, batch_first=True)
         self.dropout = nn.Dropout(dropout)
+        print("hidden_size:", hidden_size, "out_size:", out_size)
         self.linear_1 = nn.Linear(hidden_size, out_size)
 
     def forward(self, x):
@@ -130,14 +132,14 @@ class LMF(nn.Module):
 
         self.seqs_prob = dropouts[0]
         self.quas_prob = dropouts[1]
-        self.post_fusion_prob = dropouts[3]
+        self.post_fusion_prob = dropouts[2]
 
         # define the pre-fusion subnetworks
         # 子网络的初始化：
         # 使用SubNet为音频和视频数据初始化预处理网络。
         # 使用TextSubNet为文本数据初始化基于LSTM的预处理网络。
-        self.seqs_subnet = SubNet(self.seqs_in, self.seqs_hidden, self.seqs_prob)
-        self.quas_subnet = SubNet(self.quas_in, self.quas_hidden, self.quas_prob)
+        self.seqs_subnet = TextSubNet(4, self.seqs_hidden, self.text_out)
+        self.quas_subnet = TextSubNet(self.quas_in, self.quas_hidden, self.text_out)
         # self.text_subnet = TextSubNet(self.text_in, self.text_hidden, self.text_out, dropout=self.text_prob)
 
         # define the post_fusion layers
@@ -146,8 +148,8 @@ class LMF(nn.Module):
         # 使用xavier_normal_初始化因子矩阵和融合权重，以确保合理的权重分布。
         self.post_fusion_dropout = nn.Dropout(p=self.post_fusion_prob)
         # self.post_fusion_layer_1 = nn.Linear((self.text_out + 1) * (self.video_hidden + 1) * (self.audio_hidden + 1), self.post_fusion_dim)
-        self.seqs_factor = Parameter(torch.Tensor(self.rank, self.seqs_hidden + 1, self.output_dim))
-        self.quas_factor = Parameter(torch.Tensor(self.rank, self.quas_hidden + 1, self.output_dim))
+        self.seqs_factor = Parameter(torch.Tensor(self.rank, 16, self.output_dim))
+        self.quas_factor = Parameter(torch.Tensor(self.rank, 16, self.output_dim))
         # self.text_factor = Parameter(torch.Tensor(self.rank, self.text_out + 1, self.output_dim))
         self.fusion_weights = Parameter(torch.Tensor(1, self.rank))
         self.fusion_bias = Parameter(torch.Tensor(1, self.output_dim))
@@ -169,11 +171,18 @@ class LMF(nn.Module):
         # 模态特定处理：
         # 音频和视频数据经过相应的SubNet处理。
         # 文本数据经过TextSubNet处理。
+        print("Input shape to of seqs_x:", seqs_x.shape)
         seqs_h = self.seqs_subnet(seqs_x)
         quas_h = self.quas_subnet(quas_x)
         # text_h = self.text_subnet(text_x)
         batch_size = seqs_h.data.shape[0]
+        print("batch_size:", batch_size)
+        print("seqs_h:", seqs_h.shape)
 
+        # 低秩多模态融合：
+        # 为每种模态的输出附加一个偏置单元（1s），这样可以在融合中包括偏置。
+        # 使用三个模态的因子矩阵（audio_factor, video_factor, text_factor）对各模态数据进行变换。
+        # 计算各模态变换结果的元素积，这是低秩融合的关键步骤。
         # next we perform low-rank multimodal fusion
         # here is a more efficient implementation than the one the paper describes
         # basically swapping the order of summation and elementwise product
@@ -181,16 +190,15 @@ class LMF(nn.Module):
             DTYPE = torch.cuda.FloatTensor
         else:
             DTYPE = torch.FloatTensor
-
-        # 低秩多模态融合：
-        # 为每种模态的输出附加一个偏置单元（1s），这样可以在融合中包括偏置。
-        # 使用三个模态的因子矩阵（audio_factor, video_factor, text_factor）对各模态数据进行变换。
-        # 计算各模态变换结果的元素积，这是低秩融合的关键步骤。
+        # 确保DTYPE正确定义
+        DTYPE = torch.float
         # _audio_h = torch.cat((torch.ones(batch_size, 1, dtype=DTYPE), audio_h), dim=1)
-        _seqs_h = torch.cat((torch.ones(batch_size, 1, dtype=DTYPE), seqs_h), dim=1)
-        _quas_h = torch.cat((torch.ones(batch_size, 1, dtype=DTYPE), quas_h), dim=1)
+        _seqs_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE), seqs_h), dim=1)
+        _quas_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE), seqs_h), dim=1)
         # _text_h = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), text_h), dim=1)
 
+        print("_seqs_h:", _seqs_h.shape)
+        print("seqs_factor:", self.seqs_factor.shape)
         fusion_audio = torch.matmul(_seqs_h, self.seqs_factor)
         fusion_video = torch.matmul(_quas_h, self.quas_factor)
         # fusion_text = torch.matmul(_text_h, self.text_factor)

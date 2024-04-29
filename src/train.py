@@ -59,6 +59,21 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
             sample_ind, seqs, quas = batch_X
+            # 如果seqs是Tensor，确保使用PyTorch的方法
+            if isinstance(seqs, torch.Tensor):
+                seqs_is_zero = torch.all(seqs == 0).item()  # .item() 将单元素张量转换为Python的布尔值
+            else:
+                # 如果seqs是numpy数组，现有的方法是正确的
+                seqs_is_zero = np.all(seqs == 0)
+
+            if isinstance(quas, torch.Tensor):
+                quas_is_zero = torch.all(quas == 0).item()
+            else:
+                quas_is_zero = np.all(quas == 0)
+
+            if seqs_is_zero or quas_is_zero:
+                continue
+
             eval_attr = batch_Y.squeeze(-1)  # if num of labels is 1
 
             model.zero_grad()

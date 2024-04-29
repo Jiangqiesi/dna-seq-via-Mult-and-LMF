@@ -31,6 +31,7 @@ class MULTModel(nn.Module):
         self.embed_dropout = hyp_params.embed_dropout
         self.attn_mask = hyp_params.attn_mask
         self.rank = hyp_params.rank
+        self.seq_dim, self.qua_dim = hyp_params.seq_dim, hyp_params.qua_dim
 
         # combined_dim = self.d_l + self.d_a + self.d_v
         combined_dim = self.d_c + self.d_q
@@ -48,9 +49,12 @@ class MULTModel(nn.Module):
         input_dims = (self.orig_d_c, self.orig_d_q)
         hidden_dims = (self.d_c, self.d_q)
         text_out = self.d_f // 2
-        dropouts = self.embed_dropout
+        dropouts = [self.attn_dropout_c, self.attn_dropout_q, self.attn_dropout]
         # TODO: output_dim待商榷
-        self.LMF_f_with_cq = LMF(input_dims, hidden_dims, text_out, dropouts, output_dim, self.rank)
+        # audio_dim = train_set[0][0].shape[0]
+        # print("Audio feature dimension is: {}".format(audio_dim))
+
+        self.LMF_f_with_cq = LMF((self.seq_dim, self.qua_dim), hidden_dims, text_out, dropouts, output_dim, self.rank)
 
         # 二：再跨膜transformer
         # 1. Temporal convolutional layers
@@ -105,11 +109,12 @@ class MULTModel(nn.Module):
         应用Dropout: 在文本数据x_l上应用dropout以防止过拟合，其中self.embed_dropout是dropout比例。
         """
         # TODO: 可能有些地方要改，比如是否要先LMF再转置
-        x_c = F.dropout(x_c.transpose(1, 2), p=self.embed_dropout, training=self.training)
-        x_q = x_q.transpose(1, 2)
-
         # 在这里先进行LMF
+        print("Input shape of x_c:", x_c.shape)
         x_f = self.LMF_f_with_cq(x_c, x_q)
+
+        x_c = F.dropout(x_c.transpose(1, 2), p=self.embed_dropout, training=self.training)
+        # x_q = x_q.transpose(1, 2)
 
         # Project the textual/visual/audio features
         # 特征投影

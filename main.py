@@ -121,6 +121,15 @@ print("Start loading the data....")
 train_data = get_data(args, dataset, 'train')
 valid_data = get_data(args, dataset, 'valid')
 test_data = get_data(args, dataset, 'test')
+
+# 获取到维度，用于LMF的input dim参数
+#     audio_dim = train_set[0][0].shape[0]
+#     print("Audio feature dimension is: {}".format(audio_dim))
+_, seq, qua = train_data[0][0]
+seq_dim = seq.shape[0]
+print("Sequence feature dimension is: {}".format(seq_dim))
+qua_dim = qua.shape[0]
+print("Quas feature dimension is: {}".format(qua_dim))
    
 train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
 valid_loader = DataLoader(valid_data, batch_size=args.batch_size, shuffle=True)
@@ -140,8 +149,8 @@ params = dict()
 params['rank'] = [1, 4, 8, 16]
 
 hyp_params = args
-hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v = train_data.get_dim()
-hyp_params.l_len, hyp_params.a_len, hyp_params.v_len = train_data.get_seq_len()
+# hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v = train_data.get_dim()
+# hyp_params.l_len, hyp_params.a_len, hyp_params.v_len = train_data.get_seq_len()
 hyp_params.layers = args.nlevels
 hyp_params.use_cuda = use_cuda
 hyp_params.dataset = dataset
@@ -155,6 +164,7 @@ hyp_params.criterion = criterion_dict.get(dataset, 'L1Loss')
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
 hyp_params.c_len, hyp_params.q_len, hyp_params.v_len = train_data.get_seq_len()
 hyp_params.rank = random.choice(params['rank'])
+hyp_params.seq_dim, hyp_params.qua_dim = seq_dim, qua_dim
 # output_dim criterion待修改
 
 

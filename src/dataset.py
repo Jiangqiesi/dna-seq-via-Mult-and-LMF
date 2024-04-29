@@ -106,8 +106,10 @@ class multiseqs_datasets(Dataset):
         return self.ori_seqs.shape[0]
 
     def __getitem__(self, idx):
-        x = (idx, self.seqs[idx, :], self.quas[idx, :, :])
-        y = self.ori_seqs[idx, :]
+        div = int(idx / 47)
+        rem = idx % 47
+        x = (rem, self.seqs[div, rem, :], self.quas[idx, rem, :])
+        y = self.ori_seqs[div, :]
         return x, y
 
 
