@@ -117,6 +117,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                 if hyp_params.dataset == 'iemocap':
                     preds = preds.view(-1, 2)
                     eval_attr = eval_attr.view(-1)
+                # print("Predictions shape:", preds.shape)
+                # print("Eval attribute shape:", eval_attr.shape)
                 raw_loss = criterion(preds, eval_attr)
                 combined_loss = raw_loss     # + ctc_loss
                 combined_loss.backward()

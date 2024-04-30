@@ -84,7 +84,9 @@ class multiseqs_datasets(Dataset):
             dataset2 = dataset2[:int(0.6 * len(dataset2))]
             dataset3 = dataset3[:int(0.6 * len(dataset3))]
         self.seqs = torch.tensor(dataset2.astype(np.float32)).cpu().detach()
-        self.quas = torch.tensor(dataset3.astype(np.float32)).cpu().detach()
+        # 对于质量值，提高一个维度
+        quas_expended = np.expand_dims(dataset3, axis=-1)
+        self.quas = torch.tensor(quas_expended.astype(np.float32)).cpu().detach()
         self.ori_seqs = torch.tensor(dataset1.astype(np.float32)).cpu().detach()
 
         self.data1 = data1

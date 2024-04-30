@@ -40,7 +40,8 @@ class MULTModel(nn.Module):
         if self.partial_mode == 1:
             combined_dim = 2 * self.d_c  # assuming d_l == d_a == d_v
         else:
-            combined_dim = 2 * (self.d_c + self.d_q)
+            combined_dim = self.d_c + self.d_q
+        # print("combined_dim:", combined_dim)
 
         output_dim = hyp_params.output_dim  # This is actually not a hyperparameter :-)
 
@@ -58,8 +59,9 @@ class MULTModel(nn.Module):
 
         # 二：再跨膜transformer
         # 1. Temporal convolutional layers
-        self.proj_c = nn.Conv1d(self.orig_d_c, self.d_c, kernel_size=1, padding=0, bias=False)
-        self.proj_q = nn.Conv1d(self.orig_d_q, self.d_q, kernel_size=1, padding=0, bias=False)
+        self.proj_c = nn.Conv1d(4, self.d_c, kernel_size=1, padding=0, bias=False)
+        self.proj_q = nn.Conv1d(1, self.d_q, kernel_size=1, padding=0, bias=False)
+        self.proj_f = nn.Conv1d(1, self.d_f, kernel_size=1, padding=0, bias=False)
 
         # 2. Crossmodal Attentions
         # lonly --> x_c; aonly  --> x_q
@@ -78,7 +80,7 @@ class MULTModel(nn.Module):
         # TODO: 待修改
         self.proj1 = nn.Linear(combined_dim, combined_dim)
         self.proj2 = nn.Linear(combined_dim, combined_dim)
-        self.out_layer = nn.Linear(combined_dim, output_dim)
+        self.out_layer = nn.Linear(combined_dim, output_dim * 4)
 
     def get_network(self, self_type='c', layers=-1):
         if self_type in ['cq', 'cf']:
@@ -86,9 +88,9 @@ class MULTModel(nn.Module):
         elif self_type in ['qc', 'qf']:
             embed_dim, attn_dropout = self.d_q, self.attn_dropout
         elif self_type == 'c_mem':
-            embed_dim, attn_dropout = 2 * self.d_c, self.attn_dropout
+            embed_dim, attn_dropout = self.d_c, self.attn_dropout
         elif self_type == 'q_mem':
-            embed_dim, attn_dropout = 2 * self.d_q, self.attn_dropout
+            embed_dim, attn_dropout = self.d_q, self.attn_dropout
         else:
             raise ValueError("Unknown network type")
 
@@ -107,14 +109,19 @@ class MULTModel(nn.Module):
         输入数据: 输入x_c（文本）、x_q（音频）应具有维度 [batch_size, seq_len, n_features]。
         转置操作: 输入数据首先被转置到 [batch_size, n_features, seq_len]，以适配后续操作。
         应用Dropout: 在文本数据x_l上应用dropout以防止过拟合，其中self.embed_dropout是dropout比例。
+        [batch_size: 批大小==N, seq_len: 序列长度L, n_features: 通道数C]
+        L=260,dna通道数C=4,qua通道数C=1
         """
         # TODO: 可能有些地方要改，比如是否要先LMF再转置
         # 在这里先进行LMF
-        print("Input shape of x_c:", x_c.shape)
+        # print("Input shape of x_c:", x_c.shape)
+        # print("Input shape of x_q:", x_q.shape)
         x_f = self.LMF_f_with_cq(x_c, x_q)
+        # print("Output shape of LMF:", x_f.shape)
 
         x_c = F.dropout(x_c.transpose(1, 2), p=self.embed_dropout, training=self.training)
-        # x_q = x_q.transpose(1, 2)
+        x_q = x_q.transpose(1, 2)
+        # print("Input shape of x_c after dropout:", x_c.shape)
 
         # Project the textual/visual/audio features
         # 特征投影
@@ -122,9 +129,19 @@ class MULTModel(nn.Module):
         # 对特征进行投影，以确保所有模态的特征维度统一。
         # 重新排列: 为了适应后续的处理流程，对投影后的特征进行维度的重新排列，使其变为[seq_len, batch_size, n_features]。
         proj_x_c = x_c if self.orig_d_c == self.d_c else self.proj_c(x_c)
+        # print("shape of proj_x_c:", proj_x_c.shape)
         proj_x_q = x_q if self.orig_d_q == self.d_q else self.proj_q(x_q)
         proj_x_c = proj_x_c.permute(2, 0, 1)
+        # print("shape of proj_x_c after permute:", proj_x_c.shape)
         proj_x_q = proj_x_q.permute(2, 0, 1)
+        # 对x_f也进行conv1d操作
+        # x_f = x_f.transpose(0, 1)
+        x_f = x_f.unsqueeze(-1)
+        x_f = x_f.transpose(1, 2)
+        proj_x_f = x_f if self.orig_d_f == self.d_f else self.proj_f(x_f)
+        # print("shape of proj_x_f:", proj_x_f.shape)
+        # proj_x_f = proj_x_f.expand(24, 30, 260)
+        proj_x_f = proj_x_f.permute(2, 0, 1)
 
         # 模态特定处理
         # 根据配置（lonly, aonly, vonly），模型可以选择仅使用一种模态的信息进行处理。
@@ -133,21 +150,29 @@ class MULTModel(nn.Module):
         # 例如，如果lonly为真，模型将只使用文本信息，但在处理文本信息时，会考虑音频和视觉信息的影响。
         # 融合来自不同模态影响的特征后，再通过一个记忆转换层（如self.trans_l_mem）进行进一步的处理。
         # 我们不根据配置
-        h_c_with_f = self.trans_c_with_f(proj_x_c, x_f, x_f)
+        h_c_with_f = self.trans_c_with_f(proj_x_c, proj_x_f, proj_x_f)
+        # print("shape of h_c_with_f:", h_c_with_f.shape)
         h_c = self.trans_c_mem(h_c_with_f)
+        # print("shape of h_c:", h_c.shape)
         last_h_c = h_c[-1]
 
-        h_q_with_f = self.trans_q_with_f(proj_x_q, x_f, x_f)
+        h_q_with_f = self.trans_q_with_f(proj_x_q, proj_x_f, proj_x_f)
         h_q = self.trans_q_mem(h_q_with_f)
+        # print("shape of h_q:", h_q.shape)
         last_h_q = h_q[-1]
         # 聚合和预测
         # 聚合不同模态: 结合所有两种模态的信息，将它们最后的隐藏状态（last_h_x）进行拼接。
         # 残差连接: 对拼接后的特征进行一次线性变换后，应用ReLU激活函数和dropout，再进行另一次线性变换，并添加一个残差连接。
         last_hs = torch.cat([last_h_c, last_h_q], dim=1)
+        # print("shape of last_hs:", last_hs.shape)
 
         # A residual block
         last_hs_proj = self.proj2(F.dropout(F.relu(self.proj1(last_hs)), p=self.out_dropout, training=self.training))
         last_hs_proj += last_hs
+        # print("shape of last_hs_proj:", last_hs_proj.shape)
 
         output = self.out_layer(last_hs_proj)
+        # 改变 output 的形状为 [24, 260, 4]
+        output = output.view(-1, 260, 4)  # -1 在这里自动计算为 24
+        # print("shape of output:", output.shape)
         return output, last_hs
