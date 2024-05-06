@@ -76,13 +76,13 @@ class multiseqs_datasets(Dataset):
             dataset2 = dataset2[:int(0.6 * len(dataset2))]
             dataset3 = dataset3[:int(0.6 * len(dataset3))]
         elif split_type == 'test':
-            dataset1 = dataset1[int(0.6 * len(dataset1)):]
-            dataset2 = dataset2[int(0.6 * len(dataset2)):]
-            dataset3 = dataset3[int(0.6 * len(dataset3)):]
+            dataset1 = dataset1[int(0.6 * len(dataset1)):int(0.8 * len(dataset1))]
+            dataset2 = dataset2[int(0.6 * len(dataset2)):int(0.8 * len(dataset2))]
+            dataset3 = dataset3[int(0.6 * len(dataset3)):int(0.8 * len(dataset3))]
         elif split_type == 'valid':
-            dataset1 = dataset1[:int(0.6 * len(dataset1))]
-            dataset2 = dataset2[:int(0.6 * len(dataset2))]
-            dataset3 = dataset3[:int(0.6 * len(dataset3))]
+            dataset1 = dataset1[int(0.8 * len(dataset1)):]
+            dataset2 = dataset2[int(0.8 * len(dataset2)):]
+            dataset3 = dataset3[int(0.8 * len(dataset3)):]
         self.seqs = torch.tensor(dataset2.astype(np.float32)).cpu().detach()
         # 对于质量值，提高一个维度
         quas_expended = np.expand_dims(dataset3, axis=-1)
@@ -115,9 +115,9 @@ class multiseqs_datasets(Dataset):
         return x, y
 
 
-# 测试代码
-print("test start")
-data_path = '/Users/jiangqiesi/Documents/code/PycharmProjects/Multimodal-Transformer/data/'
-save_data_file = data_path + 'tmp.pkl'
-data = multiseqs_datasets(data_path)
-torch.save(data, save_data_file)
+# # 测试代码
+# print("test start")
+# data_path = '/Users/jiangqiesi/Documents/code/PycharmProjects/Multimodal-Transformer/data/'
+# save_data_file = data_path + 'tmp.pkl'
+# data = multiseqs_datasets(data_path)
+# torch.save(data, save_data_file)
