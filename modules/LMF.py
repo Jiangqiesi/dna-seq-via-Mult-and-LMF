@@ -64,6 +64,8 @@ class TextSubNet(nn.Module):
         self.dropout = nn.Dropout(dropout)
         # print("hidden_size:", hidden_size, "out_size:", out_size)
         self.linear_1 = nn.Linear(hidden_size, out_size)
+        self.hidden_size = hidden_size
+        self.out_size = out_size
 
     def forward(self, x):
         '''
@@ -72,7 +74,7 @@ class TextSubNet(nn.Module):
         '''
         _, final_states = self.rnn(x)
         h = self.dropout(final_states[0].squeeze())
-        y_1 = self.linear_1(h)
+        y_1 = self.linear_1(h) if self.hidden_size == self.out_size else h
         return y_1
 
 
@@ -148,8 +150,8 @@ class LMF(nn.Module):
         # 使用xavier_normal_初始化因子矩阵和融合权重，以确保合理的权重分布。
         self.post_fusion_dropout = nn.Dropout(p=self.post_fusion_prob)
         # self.post_fusion_layer_1 = nn.Linear((self.text_out + 1) * (self.video_hidden + 1) * (self.audio_hidden + 1), self.post_fusion_dim)
-        self.seqs_factor = Parameter(torch.Tensor(self.rank, 16, self.output_dim))
-        self.quas_factor = Parameter(torch.Tensor(self.rank, 16, self.output_dim))
+        self.seqs_factor = Parameter(torch.Tensor(self.rank, self.text_out + 1, self.output_dim))
+        self.quas_factor = Parameter(torch.Tensor(self.rank, self.text_out + 1, self.output_dim))
         # self.text_factor = Parameter(torch.Tensor(self.rank, self.text_out + 1, self.output_dim))
         self.fusion_weights = Parameter(torch.Tensor(1, self.rank))
         self.fusion_bias = Parameter(torch.Tensor(1, self.output_dim))
@@ -171,13 +173,10 @@ class LMF(nn.Module):
         # 模态特定处理：
         # 音频和视频数据经过相应的SubNet处理。
         # 文本数据经过TextSubNet处理。
-        # print("Input shape to of seqs_x:", seqs_x.shape)
         seqs_h = self.seqs_subnet(seqs_x)
         quas_h = self.quas_subnet(quas_x)
         # text_h = self.text_subnet(text_x)
         batch_size = seqs_h.data.shape[0]
-        # print("batch_size:", batch_size)
-        # print("seqs_h:", seqs_h.shape)
 
         # 低秩多模态融合：
         # 为每种模态的输出附加一个偏置单元（1s），这样可以在融合中包括偏置。
@@ -194,7 +193,7 @@ class LMF(nn.Module):
         DTYPE = torch.float
         # _audio_h = torch.cat((torch.ones(batch_size, 1, dtype=DTYPE), audio_h), dim=1)
         _seqs_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE), seqs_h), dim=1)
-        _quas_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE), seqs_h), dim=1)
+        _quas_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE), quas_h), dim=1)
         # _text_h = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), text_h), dim=1)
 
         # print("_seqs_h:", _seqs_h.shape)
@@ -213,4 +212,5 @@ class LMF(nn.Module):
         output = output.view(-1, self.output_dim)
         if self.use_softmax:
             output = F.softmax(output)
+        # print("output:", output.shape)
         return output

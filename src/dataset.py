@@ -99,19 +99,19 @@ class multiseqs_datasets(Dataset):
         return self.n_modalities
 
     def get_seq_len(self):
-        return self.seqs.shape[1], self.quas.shape[1], self.ori_seqs.shape[0]
+        return self.seqs.shape[2], self.quas.shape[2], self.ori_seqs.shape[1]
 
     def get_dim(self):
-        return self.seqs.shape[2], self.quas.shape[2],  self.ori_seqs.shape[1]
+        return self.seqs.shape[3], self.quas.shape[3],  self.ori_seqs.shape[2]
 
     def __len__(self):
         return self.ori_seqs.shape[0]
 
     def __getitem__(self, idx):
-        div = int(idx / 47)
-        rem = idx % 47
-        x = (rem, self.seqs[div, rem, :], self.quas[idx, rem, :])
-        y = self.ori_seqs[div, :]
+        # div = int(idx / 47)
+        # rem = idx % 47
+        x = (idx, self.seqs[idx, :], self.quas[idx, :])
+        y = self.ori_seqs[idx, :]
         return x, y
 
 

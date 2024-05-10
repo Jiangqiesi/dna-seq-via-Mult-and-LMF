@@ -88,4 +88,52 @@ def eval_iemocap(results, truths, single=-1):
         print("  - Accuracy: ", acc)
 
 
+def eval_dna(results, truths):
+    index_to_base = ['A', 'C', 'G', 'T']
+    base_arr = np.array([1, 1, 1, 1])
+    results = results.numpy()
+    truths = truths.numpy()
+    results_indices = np.argmax(results, axis=-1)
+    truths_indices = np.argmax(truths, axis=-1)
+    print("results after argmax:", results_indices)
+    print("truths after argmax:", truths_indices)
+
+    list_of_results = []
+    list_of_truths = []
+    list_of_confidence = []
+    list_of_mean = []
+    for i in range(0, results_indices.shape[0]):
+        result_str = ""
+        truth_str = ""
+
+        # confidence_arr = np.zeros(260)
+        # 比较预测和真实标签
+        # correct_predictions = (results_indices[i] == truths_indices[i])
+        # 计算置信度
+        # confidence_scores = results[np.arange(results.shape[1]), results_indices[i]]
+        # mean_confidence = np.mean(confidence_scores[correct_predictions])
+        for j in range(0, results_indices.shape[1]):
+            result_str = result_str + index_to_base[results_indices[i][j]]
+            truth_str = truth_str + index_to_base[truths_indices[i][j]]
+
+        list_of_results.append(result_str)
+        list_of_truths.append(truth_str)
+        # list_of_confidence.append(confidence_scores)
+        # list_of_mean.append(mean_confidence)
+
+    correct_predictions = (results_indices == truths_indices)
+    confidence_scores = np.max(results, axis=-1)
+    mean_confidence = np.mean(confidence_scores[correct_predictions], axis=-1)
+    print("shape of mean:", mean_confidence.shape)
+    confidence_scores = np.abs(confidence_scores)
+    # print("shape of confidence:", list_of_confidence[0].shape)
+
+    with open("./final_data.txt", "w") as f:
+        for i in range(0, len(list_of_results)):
+            # 先输出索引
+            f.write(str(i) + "\n")
+            f.write("result:" + list_of_results[i] + "\n")
+            f.write("truth:" + list_of_truths[i] + "\n")
+            f.write("Confidence scores:" + str(confidence_scores[i]) + "\n")
+            # f.write("Mean confidence:" + str(mean_confidence[i]) + "\n")
 

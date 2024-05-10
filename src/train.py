@@ -54,10 +54,11 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
     def train(model, optimizer, criterion):
         epoch_loss = 0
         model.train()
-        num_batches = hyp_params.n_train // hyp_params.batch_size
+        num_batches = hyp_params.n_train    # // hyp_params.batch_size
         proc_loss, proc_size = 0, 0
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
+            # print("Batch:", i_batch)
             sample_ind, seqs, quas = batch_X
             # 如果seqs是Tensor，确保使用PyTorch的方法
             if isinstance(seqs, torch.Tensor):
@@ -74,7 +75,10 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             if seqs_is_zero or quas_is_zero:
                 continue
 
-            eval_attr = batch_Y.squeeze(-1)  # if num of labels is 1
+            # 由于实际的batch_size=1，所以需要对第一个维度折叠
+            seqs = seqs.squeeze(0)
+            quas = quas.squeeze(0)
+            eval_attr = batch_Y.squeeze(0)  # if num of labels is 1
 
             model.zero_grad()
 
@@ -86,12 +90,14 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                         eval_attr = eval_attr.long()
 
             batch_size = seqs.size(0)
+            # print("Batch size:", batch_size)
             batch_chunk = hyp_params.batch_chunk
 
             # CTC
 
             combined_loss = 0
-            net = nn.DataParallel(model) if batch_size > 10 else model
+            # net = nn.DataParallel(model) if batch_size > 10 else model
+            net = model
             if batch_chunk > 1:
                 raw_loss = combined_loss = 0
                 seqs_chunks = seqs.chunk(batch_chunk, dim=0)
@@ -156,6 +162,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         with torch.no_grad():
             for i_batch, (batch_X, batch_Y) in enumerate(loader):
                 sample_ind, seqs, quas = batch_X
+                # 由于实际的batch_size=1，所以需要对第一个维度折叠
+                seqs = seqs.squeeze(0)
+                quas = quas.squeeze(0)
                 eval_attr = batch_Y.squeeze(dim=-1)  # if num of labels is 1
 
                 if hyp_params.use_cuda:
@@ -172,7 +181,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                 #     audio, _ = ctc_a2l_net(audio)  # audio aligned to text
                 #     vision, _ = ctc_v2l_net(vision)  # vision aligned to text
 
-                net = nn.DataParallel(model) if batch_size > 10 else model
+                # net = nn.DataParallel(model) if batch_size > 10 else model
+                net = model
                 preds, _ = net(seqs, quas)
                 if hyp_params.dataset == 'iemocap':
                     preds = preds.view(-1, 2)
@@ -213,16 +223,26 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
 
     model = load_model(hyp_params, name=hyp_params.name)
     _, results, truths = evaluate(model, criterion, test=True)
+    print("results shape:", results.shape)
+    print("results:", results[0])
+    results_softmax = torch.nn.functional.softmax(results.float(), dim=-1)
+    print("after softmax shape:", results_softmax.shape)
+    print("after softmax:", results_softmax[0])
 
-    if hyp_params.dataset == "mosei_senti":
-        eval_mosei_senti(results, truths, True)
-    elif hyp_params.dataset == 'mosi':
-        eval_mosi(results, truths, True)
-    elif hyp_params.dataset == 'iemocap':
-        eval_iemocap(results, truths)
+    print("truths shape:", truths.shape)
+    print("truths:", truths)
+    truths_softmax = torch.nn.functional.softmax(truths.float(), dim=-1)
+    print("truth after softmax:", truths_softmax[0])
+    # if hyp_params.dataset == "mosei_senti":
+    #     eval_mosei_senti(results, truths, True)
+    # elif hyp_params.dataset == 'mosi':
+    #     eval_mosi(results, truths, True)
+    # elif hyp_params.dataset == 'iemocap':
+    #     eval_iemocap(results, truths)
     # TODO：待补充的数据集
-    elif hyp_params.dataset == '':
-        print("自己设置的模型")
+    # hyp_params.dataset == '':
+    print("自己设置的模型")
+    eval_dna(results, truths)
 
     sys.stdout.flush()
     input('[Press Any Key to start another run]')

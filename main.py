@@ -48,14 +48,14 @@ parser.add_argument('--out_dropout', type=float, default=0.0,
 # TODO: 待定nlevels, num_heads
 parser.add_argument('--nlevels', type=int, default=5,
                     help='number of layers in the network (default: 5)')
-parser.add_argument('--num_heads', type=int, default=5,
-                    help='number of heads for the transformer network (default: 5)')
+parser.add_argument('--num_heads', type=int, default=2,
+                    help='number of heads for the transformer network (default: 2)')
 parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: true)')
 
 # Tuning
-parser.add_argument('--batch_size', type=int, default=24, metavar='N',
-                    help='batch size (default: 24)')
+parser.add_argument('--batch_size', type=int, default=47, metavar='N',
+                    help='batch size (default: 47)')
 parser.add_argument('--clip', type=float, default=0.8,
                     help='gradient clip value (default: 0.8)')
 parser.add_argument('--lr', type=float, default=1e-3,
@@ -126,14 +126,16 @@ test_data = get_data(args, dataset, 'test')
 #     audio_dim = train_set[0][0].shape[0]
 #     print("Audio feature dimension is: {}".format(audio_dim))
 _, seq, qua = train_data[0][0]
-seq_dim = seq.shape[0]
-print("Sequence feature dimension is: {}".format(seq_dim))
-qua_dim = qua.shape[0]
-print("Quas feature dimension is: {}".format(qua_dim))
+seq_dim = seq.shape[1]
+print("Sequence dimension is: {}".format(seq.shape))
+qua_dim = qua.shape[1]
+print("Quality dimension is: {}".format(qua.shape))
+ori_seq = train_data[0][1]
+print("Original sequence dimension is: {}".format(ori_seq.shape))
    
-train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
-valid_loader = DataLoader(valid_data, batch_size=args.batch_size, shuffle=True)
-test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True)
+train_loader = DataLoader(train_data, batch_size=1, shuffle=False)
+valid_loader = DataLoader(valid_data, batch_size=1, shuffle=False)
+test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
 
 print('Finish loading the data....')
 if not args.aligned:
@@ -159,11 +161,15 @@ hyp_params.batch_chunk = args.batch_chunk
 hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_data), len(valid_data), len(test_data)
 hyp_params.model = str.upper(args.model.strip())
 # hyp_params.output_dim = output_dim_dict.get(dataset, 1)
-hyp_params.output_dim = 260
+hyp_params.output_dim = 4
 hyp_params.criterion = criterion_dict.get(dataset, 'L1Loss')
 # TODO:修改超参数 注意对应dataset类的函数返回值
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
+print('hyp_params.orig_d_c: {}'.format(hyp_params.orig_d_c))
+print('hyp_params.orig_d_q: {}'.format(hyp_params.orig_d_q))
+print('hyp_params.orig_d_f: {}'.format(hyp_params.orig_d_f))
 hyp_params.c_len, hyp_params.q_len, hyp_params.v_len = train_data.get_seq_len()
+print('hyp_params.c_len: {}'.format(hyp_params.c_len))
 hyp_params.rank = random.choice(params['rank'])
 hyp_params.seq_dim, hyp_params.qua_dim = seq_dim, qua_dim
 # output_dim criterion待修改
