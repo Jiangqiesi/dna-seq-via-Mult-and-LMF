@@ -78,7 +78,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             # 由于实际的batch_size=1，所以需要对第一个维度折叠
             seqs = seqs.squeeze(0)
             quas = quas.squeeze(0)
-            eval_attr = batch_Y.squeeze(0)  # if num of labels is 1
+            eval_attr = batch_Y.squeeze(0)
 
             model.zero_grad()
 
@@ -165,7 +165,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                 # 由于实际的batch_size=1，所以需要对第一个维度折叠
                 seqs = seqs.squeeze(0)
                 quas = quas.squeeze(0)
-                eval_attr = batch_Y.squeeze(dim=-1)  # if num of labels is 1
+                eval_attr = batch_Y.squeeze(0)
 
                 if hyp_params.use_cuda:
                     with torch.cuda.device(0):

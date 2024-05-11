@@ -81,6 +81,8 @@ class MULTModel(nn.Module):
         # Projection layers
         # TODO: 待修改
         # 方案2.47->1
+        self.proj0_1 = nn.Linear(self.batch_size, self.batch_size)
+        self.proj0_2 = nn.Linear(self.batch_size, self.batch_size)
         self.proj0 = nn.Linear(self.batch_size, 1)
         self.proj1 = nn.Linear(combined_dim, combined_dim)
         self.proj2 = nn.Linear(combined_dim, combined_dim)
@@ -173,9 +175,10 @@ class MULTModel(nn.Module):
         # [260,47,8]->[260,8,47]
         last_hs = last_hs.transpose(1, 2)
         # [260,8,47]->[260,8]
-        last_hs = F.dropout(F.relu(self.proj0(last_hs)), p=self.embed_dropout, training=self.training)
-        last_hs = last_hs.squeeze(dim=-1)
-        # last_hs = last_hs.transpose(1, 2)
+        last_hs_1 = self.proj0_2(F.dropout(F.relu(self.proj0_1(last_hs)), p=self.embed_dropout, training=self.training))
+        last_hs += last_hs_1
+        last_hs = self.proj0(last_hs)
+        last_hs = last_hs.transpose(1, 2)
         # print("shape of last_hs:", last_hs.shape)
 
         # A residual block
