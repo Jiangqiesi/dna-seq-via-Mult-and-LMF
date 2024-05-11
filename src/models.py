@@ -178,7 +178,7 @@ class MULTModel(nn.Module):
         last_hs_1 = self.proj0_2(F.dropout(F.relu(self.proj0_1(last_hs)), p=self.embed_dropout, training=self.training))
         last_hs += last_hs_1
         last_hs = self.proj0(last_hs)
-        last_hs = last_hs.transpose(1, 2)
+        last_hs = last_hs.squeeze(dim=-1)
         # print("shape of last_hs:", last_hs.shape)
 
         # A residual block
