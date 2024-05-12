@@ -84,6 +84,11 @@ class MULTModel(nn.Module):
         self.proj0_1 = nn.Linear(self.batch_size, self.batch_size)
         self.proj0_2 = nn.Linear(self.batch_size, self.batch_size)
         self.proj0 = nn.Linear(self.batch_size, 1)
+        # # 方案1.94->1
+        # self.proj0_1 = nn.Linear(self.batch_size * 2, self.batch_size * 2)
+        # self.proj0_2 = nn.Linear(self.batch_size * 2, self.batch_size * 2)
+        # self.proj0 = nn.Linear(self.batch_size * 2, 1)
+
         self.proj1 = nn.Linear(combined_dim, combined_dim)
         self.proj2 = nn.Linear(combined_dim, combined_dim)
         self.out_layer = nn.Linear(combined_dim, output_dim)
@@ -159,12 +164,16 @@ class MULTModel(nn.Module):
         h_c = self.trans_c_mem(h_c_with_f)
         # print("shape of h_c:", h_c.shape)
         last_h_c = h_c  # [-1]
+        # for i in range(0, 5):
+        #     print("last_h_c[0][{}]=:{}".format(i, last_h_c[0][i]))
         # print("last_h_c:", last_h_c.shape)
 
         h_q_with_f = self.trans_q_with_f(proj_x_q, proj_x_f, proj_x_f)
         h_q = self.trans_q_mem(h_q_with_f)
         # print("shape of h_q:", h_q.shape)
         last_h_q = h_q  # [-1]
+        # for i in range(0, 5):
+        #     print("last_h_q[0][{}]=:{}".format(i, last_h_q[0][i]))
         # 聚合和预测
         # 聚合不同模态: 结合所有两种模态的信息，将它们最后的隐藏状态（last_h_x）进行拼接。
         # 残差连接: 对拼接后的特征进行一次线性变换后，应用ReLU激活函数和dropout，再进行另一次线性变换，并添加一个残差连接。
@@ -175,17 +184,26 @@ class MULTModel(nn.Module):
         # [260,47,8]->[260,8,47]
         last_hs = last_hs.transpose(1, 2)
         # [260,8,47]->[260,8]
-        last_hs_1 = self.proj0_2(F.dropout(F.relu(self.proj0_1(last_hs)), p=self.embed_dropout, training=self.training))
+        last_hs_1 = self.proj0_2(F.dropout(F.sigmoid(self.proj0_1(last_hs)), p=self.embed_dropout, training=self.training))
         last_hs += last_hs_1
         last_hs = self.proj0(last_hs)
         last_hs = last_hs.squeeze(dim=-1)
         # print("shape of last_hs:", last_hs.shape)
+        # # 使用方案1.dim=1
+        # last_hs = torch.cat((last_h_c, last_h_q), dim=1)
+        # # [260,94,4]->[260,4,94]
+        # last_hs = last_hs.transpose(1, 2)
+        # # [260,4,94]->[260,4]
+        # last_hs_1 = self.proj0_2(F.dropout(F.relu(self.proj0_1(last_hs)), p=self.embed_dropout, training=self.training))
+        # last_hs += last_hs_1
+        # last_hs = self.proj0(last_hs)
+        # last_hs = last_hs.squeeze(dim=-1)
 
         # A residual block
-        last_hs_proj = self.proj2(F.dropout(F.relu(self.proj1(last_hs)), p=self.out_dropout, training=self.training))
+        last_hs_proj = self.proj2(F.dropout(F.sigmoid(self.proj1(last_hs)), p=self.out_dropout, training=self.training))
         last_hs_proj += last_hs
         # print("shape of last_hs_proj:", last_hs_proj.shape)
 
-        output = self.out_layer(last_hs_proj)
+        output = self.out_layer(last_hs_proj) #if False else last_hs
         # print("output shape:", output.shape)
         return output, last_hs

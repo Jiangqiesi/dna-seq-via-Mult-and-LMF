@@ -136,4 +136,6 @@ def eval_dna(results, truths):
             f.write("truth:" + list_of_truths[i] + "\n")
             f.write("Confidence scores:" + str(confidence_scores[i]) + "\n")
             # f.write("Mean confidence:" + str(mean_confidence[i]) + "\n")
+            f.write("result:" + repr(results[i]) + "\n")
+            f.write("truth:" + repr(truths[i]) + "\n")
 

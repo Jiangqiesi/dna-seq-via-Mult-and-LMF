@@ -60,7 +60,7 @@ class TextSubNet(nn.Module):
             (return value in forward) a tensor of shape (batch_size, out_size)
         '''
         super(TextSubNet, self).__init__()
-        self.rnn = nn.LSTM(in_size, hidden_size=hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=bidirectional, batch_first=True)
+        self.rnn = nn.LSTM(in_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
         self.dropout = nn.Dropout(dropout)
         # print("hidden_size:", hidden_size, "out_size:", out_size)
         self.linear_1 = nn.Linear(hidden_size, out_size)

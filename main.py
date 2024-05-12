@@ -162,7 +162,7 @@ hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_data), len
 hyp_params.model = str.upper(args.model.strip())
 # hyp_params.output_dim = output_dim_dict.get(dataset, 1)
 hyp_params.output_dim = 4
-hyp_params.criterion = criterion_dict.get(dataset, 'L1Loss')
+hyp_params.criterion = criterion_dict.get(dataset, 'CrossEntropyLoss')
 # TODO:修改超参数 注意对应dataset类的函数返回值
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
 print('hyp_params.orig_d_c: {}'.format(hyp_params.orig_d_c))

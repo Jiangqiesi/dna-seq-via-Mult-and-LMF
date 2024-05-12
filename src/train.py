@@ -58,6 +58,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         proc_loss, proc_size = 0, 0
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
+            # # 小规模输入截断
+            # if i_batch > 1000:
+            #     break
             # print("Batch:", i_batch)
             sample_ind, seqs, quas = batch_X
             # 如果seqs是Tensor，确保使用PyTorch的方法
@@ -224,15 +227,15 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
     model = load_model(hyp_params, name=hyp_params.name)
     _, results, truths = evaluate(model, criterion, test=True)
     print("results shape:", results.shape)
-    print("results:", results[0])
-    results_softmax = torch.nn.functional.softmax(results.float(), dim=-1)
-    print("after softmax shape:", results_softmax.shape)
-    print("after softmax:", results_softmax[0])
+    print("results:", results)
+    # results_softmax = torch.nn.functional.softmax(results.float(), dim=-1)
+    # print("after softmax shape:", results_softmax.shape)
+    # print("after softmax:", results_softmax[0])
 
     print("truths shape:", truths.shape)
     print("truths:", truths)
-    truths_softmax = torch.nn.functional.softmax(truths.float(), dim=-1)
-    print("truth after softmax:", truths_softmax[0])
+    # truths_softmax = torch.nn.functional.softmax(truths.float(), dim=-1)
+    # print("truth after softmax:", truths_softmax[0])
     # if hyp_params.dataset == "mosei_senti":
     #     eval_mosei_senti(results, truths, True)
     # elif hyp_params.dataset == 'mosi':
