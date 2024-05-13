@@ -128,7 +128,7 @@ def eval_dna(results, truths):
     confidence_scores = np.abs(confidence_scores)
     # print("shape of confidence:", list_of_confidence[0].shape)
 
-    with open("./final_data.txt", "w") as f:
+    with open("./final_data_2.txt", "w") as f:
         for i in range(0, len(list_of_results)):
             # 先输出索引
             f.write(str(i) + "\n")

@@ -193,6 +193,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                 total_loss += criterion(preds, eval_attr).item() * batch_size
 
                 # Collect the results into dictionary
+                preds = preds.unsqueeze(0)
+                eval_attr = eval_attr.unsqueeze(0)
                 results.append(preds)
                 truths.append(eval_attr)
 

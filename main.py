@@ -58,8 +58,8 @@ parser.add_argument('--batch_size', type=int, default=47, metavar='N',
                     help='batch size (default: 47)')
 parser.add_argument('--clip', type=float, default=0.8,
                     help='gradient clip value (default: 0.8)')
-parser.add_argument('--lr', type=float, default=1e-3,
-                    help='initial learning rate (default: 1e-3)')
+parser.add_argument('--lr', type=float, default=5e-3,
+                    help='initial learning rate (default: 5e-3)')
 parser.add_argument('--optim', type=str, default='Adam',
                     help='optimizer to use (default: Adam)')
 parser.add_argument('--num_epochs', type=int, default=40,
@@ -162,7 +162,8 @@ hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_data), len
 hyp_params.model = str.upper(args.model.strip())
 # hyp_params.output_dim = output_dim_dict.get(dataset, 1)
 hyp_params.output_dim = 4
-hyp_params.criterion = criterion_dict.get(dataset, 'CrossEntropyLoss')
+# BCELoss, CrossEntropyLoss
+hyp_params.criterion = criterion_dict.get(dataset, 'BCELoss')
 # TODO:修改超参数 注意对应dataset类的函数返回值
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
 print('hyp_params.orig_d_c: {}'.format(hyp_params.orig_d_c))

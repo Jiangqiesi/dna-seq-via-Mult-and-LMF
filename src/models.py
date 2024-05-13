@@ -204,6 +204,6 @@ class MULTModel(nn.Module):
         last_hs_proj += last_hs
         # print("shape of last_hs_proj:", last_hs_proj.shape)
 
-        output = self.out_layer(last_hs_proj) #if False else last_hs
+        output = F.sigmoid(self.out_layer(last_hs_proj)) #if False else last_hs
         # print("output shape:", output.shape)
         return output, last_hs

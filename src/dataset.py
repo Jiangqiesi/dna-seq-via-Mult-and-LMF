@@ -110,7 +110,10 @@ class multiseqs_datasets(Dataset):
     def __getitem__(self, idx):
         # div = int(idx / 47)
         # rem = idx % 47
-        x = (idx, self.seqs[idx, :], self.quas[idx, :])
+        if idx <= 13061:
+            x = (idx, self.seqs[idx, :], self.quas[idx, :])
+        else:
+            x = (idx, self.seqs[idx, :5, :], self.quas[idx, :5, :])
         y = self.ori_seqs[idx, :]
         return x, y
 
