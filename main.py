@@ -29,17 +29,17 @@ parser.add_argument('--data_path', type=str, default='data',
                     help='path for storing the dataset')
 
 # Dropouts
-parser.add_argument('--attn_dropout', type=float, default=0.1,
+parser.add_argument('--attn_dropout', type=float, default=0.0,
                     help='attention dropout')
 parser.add_argument('--attn_dropout_c', type=float, default=0.0,
                     help='attention dropout (for seqs)')
 parser.add_argument('--attn_dropout_q', type=float, default=0.0,
                     help='attention dropout (for quas)')
-parser.add_argument('--relu_dropout', type=float, default=0.1,
+parser.add_argument('--relu_dropout', type=float, default=0.0,
                     help='relu dropout')
-parser.add_argument('--embed_dropout', type=float, default=0.25,
+parser.add_argument('--embed_dropout', type=float, default=0.0,
                     help='embedding dropout')
-parser.add_argument('--res_dropout', type=float, default=0.1,
+parser.add_argument('--res_dropout', type=float, default=0.0,
                     help='residual block dropout')
 parser.add_argument('--out_dropout', type=float, default=0.0,
                     help='output layer dropout')
@@ -54,8 +54,8 @@ parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: true)')
 
 # Tuning
-parser.add_argument('--batch_size', type=int, default=47, metavar='N',
-                    help='batch size (default: 47)')
+parser.add_argument('--batch_size', type=int, default=24, metavar='N',
+                    help='batch size (default: 24)')
 parser.add_argument('--clip', type=float, default=0.8,
                     help='gradient clip value (default: 0.8)')
 parser.add_argument('--lr', type=float, default=5e-3,
@@ -101,7 +101,8 @@ criterion_dict = {
     'iemocap': 'CrossEntropyLoss'
 }
 
-torch.set_default_tensor_type('torch.FloatTensor')
+# torch.set_default_tensor_type('torch.FloatTensor')
+torch.set_default_dtype(torch.float32)
 if torch.cuda.is_available():
     if args.no_cuda:
         print("WARNING: You have a CUDA device, so you should probably not run with --no_cuda")
@@ -133,9 +134,9 @@ print("Quality dimension is: {}".format(qua.shape))
 ori_seq = train_data[0][1]
 print("Original sequence dimension is: {}".format(ori_seq.shape))
    
-train_loader = DataLoader(train_data, batch_size=1, shuffle=False)
-valid_loader = DataLoader(valid_data, batch_size=1, shuffle=False)
-test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
+train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=False)
+valid_loader = DataLoader(valid_data, batch_size=args.batch_size, shuffle=False)
+test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
 
 print('Finish loading the data....')
 if not args.aligned:
