@@ -54,13 +54,13 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
     def train(model, optimizer, criterion):
         epoch_loss = 0
         model.train()
-        num_batches = hyp_params.n_train    # // hyp_params.batch_size
+        num_batches = hyp_params.n_train // hyp_params.batch_size
         proc_loss, proc_size = 0, 0
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
-            # # 小规模输入截断
-            # if i_batch > 1000:
-            #     break
+            # 小规模输入截断
+            if i_batch > 1000:
+                break
             # print("Batch:", i_batch)
             sample_ind, seqs, quas = batch_X
             # 如果seqs是Tensor，确保使用PyTorch的方法
@@ -78,10 +78,10 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             if seqs_is_zero or quas_is_zero:
                 continue
 
-            # 由于实际的batch_size=1，所以需要对第一个维度折叠
-            seqs = seqs.squeeze(0)
-            quas = quas.squeeze(0)
-            eval_attr = batch_Y.squeeze(0)
+            # # 由于实际的batch_size=1，所以需要对第一个维度折叠
+            # seqs = seqs.squeeze(0)
+            # quas = quas.squeeze(0)
+            eval_attr = batch_Y
 
             model.zero_grad()
 
@@ -138,7 +138,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             #     ctc_a2l_optimizer.step()
             #     ctc_v2l_optimizer.step()
 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), hyp_params.clip)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), hyp_params.clip)
             optimizer.step()
 
             proc_loss += raw_loss.item() * batch_size
@@ -177,6 +177,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                             eval_attr = eval_attr.long()
 
                 batch_size = seqs.size(0)
+                if batch_size < hyp_params.batch_size:
+                    break
 
                 # if (ctc_a2l_module is not None) and (ctc_v2l_module is not None):
                 #     ctc_a2l_net = nn.DataParallel(ctc_a2l_module) if batch_size > 10 else ctc_a2l_module
@@ -227,6 +229,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             best_valid = val_loss
 
     model = load_model(hyp_params, name=hyp_params.name)
+    # 计算参数数量
+    total_params = sum(p.numel() for p in model.parameters())
+    print("Total parameters:", total_params)
     _, results, truths = evaluate(model, criterion, test=True)
     print("results shape:", results.shape)
     print("results:", results)
