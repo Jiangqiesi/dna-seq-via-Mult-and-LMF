@@ -83,9 +83,11 @@ def one_hot_encode_dna(sequence):
 
 # 用于质量值的归一化
 def normalize_quality_scores(quality_scores):
-    # 将质量值归一化到0-1的范围
-    normalized_quality_scores = np.array(quality_scores) / 50
-    return normalized_quality_scores
+    # y = 1 - 10 ** (-x / 10)
+    normalized_quality_scores = []
+    for score in quality_scores:
+        normalized_quality_scores.append(1 - 10 ** (-score / 10))
+    return np.array(normalized_quality_scores)
 
 
 # 根据给定的数据结构读取并整合数据

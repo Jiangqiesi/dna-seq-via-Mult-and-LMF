@@ -31,7 +31,7 @@ def initiate(hyp_params, train_loader, valid_loader, test_loader):
     criterion = getattr(nn, hyp_params.criterion)()
 
     # 优化器改进
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=hyp_params.when, factor=0.1, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=hyp_params.when, factor=0.1)
     settings = {'model': model,
                 'optimizer': optimizer,
                 'criterion': criterion,
@@ -54,12 +54,12 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
     def train(model, optimizer, criterion):
         epoch_loss = 0
         model.train()
-        num_batches = hyp_params.n_train    # // hyp_params.batch_size
+        num_batches = hyp_params.n_train // hyp_params.batch_size
         proc_loss, proc_size = 0, 0
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
             # # 小规模输入截断
-            # if i_batch > 1000:
+            # if i_batch > 10:
             #     break
             # print("Batch:", i_batch)
             sample_ind, seqs, quas = batch_X
@@ -138,13 +138,13 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             #     ctc_a2l_optimizer.step()
             #     ctc_v2l_optimizer.step()
 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), hyp_params.clip)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), hyp_params.clip)
             optimizer.step()
 
             proc_loss += raw_loss.item() * batch_size
             proc_size += batch_size
             epoch_loss += combined_loss.item() * batch_size
-            if i_batch % hyp_params.log_interval == 0 and i_batch > 0:
+            if i_batch % 10 == 0 and i_batch > 0:
                 avg_loss = proc_loss / proc_size
                 elapsed_time = time.time() - start_time
                 print('Epoch {:2d} | Batch {:3d}/{:3d} | Time/Batch(ms) {:5.2f} | Train Loss {:5.4f}'.
@@ -164,6 +164,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
 
         with torch.no_grad():
             for i_batch, (batch_X, batch_Y) in enumerate(loader):
+                # if i_batch > 1:
+                #     break
                 sample_ind, seqs, quas = batch_X
                 # 由于实际的batch_size=1，所以需要对第一个维度折叠
                 seqs = seqs.squeeze(0)
@@ -177,7 +179,10 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                             eval_attr = eval_attr.long()
 
                 batch_size = seqs.size(0)
+                if batch_size < hyp_params.batch_size:
+                    break
 
+                # print(f"Batch {i_batch} , Batch size {batch_size} , seqs shape {seqs.shape} , quas shape {quas.shape} , eval_attr shape {eval_attr.shape}")
                 # if (ctc_a2l_module is not None) and (ctc_v2l_module is not None):
                 #     ctc_a2l_net = nn.DataParallel(ctc_a2l_module) if batch_size > 10 else ctc_a2l_module
                 #     ctc_v2l_net = nn.DataParallel(ctc_v2l_module) if batch_size > 10 else ctc_v2l_module
@@ -227,6 +232,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             best_valid = val_loss
 
     model = load_model(hyp_params, name=hyp_params.name)
+    # 计算参数数量
+    total_params = sum(p.numel() for p in model.parameters())
+    print("Total parameters:", total_params)
     _, results, truths = evaluate(model, criterion, test=True)
     print("results shape:", results.shape)
     print("results:", results)

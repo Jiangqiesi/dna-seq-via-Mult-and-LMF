@@ -74,7 +74,7 @@ class TextSubNet(nn.Module):
         '''
         _, final_states = self.rnn(x)
         h = self.dropout(final_states[0].squeeze())
-        y_1 = self.linear_1(h) if self.hidden_size == self.out_size else h
+        y_1 = self.linear_1(h)  # if self.hidden_size == self.out_size else h
         return y_1
 
 
@@ -107,7 +107,7 @@ class LMF(nn.Module):
     Low-rank Multimodal Fusion
     '''
 
-    def __init__(self, input_dims, hidden_dims, text_out, dropouts, output_dim, rank, use_softmax=False):
+    def __init__(self, input_dims, hidden_dims, text_out, dropouts, output_dim, rank, use_softmax=True):
         '''
         Args:
             input_dims - a length-3 tuple, contains (audio_dim, video_dim, text_dim)
@@ -140,8 +140,8 @@ class LMF(nn.Module):
         # 子网络的初始化：
         # 使用SubNet为音频和视频数据初始化预处理网络。
         # 使用TextSubNet为文本数据初始化基于LSTM的预处理网络。
-        self.seqs_subnet = TextSubNet(4, self.seqs_hidden, self.text_out)
-        self.quas_subnet = TextSubNet(1, self.quas_hidden, self.text_out)
+        self.seqs_subnet = TextSubNet(self.seqs_in, self.seqs_hidden, self.text_out)
+        self.quas_subnet = TextSubNet(self.quas_in, self.quas_hidden, self.text_out)
         # self.text_subnet = TextSubNet(self.text_in, self.text_hidden, self.text_out, dropout=self.text_prob)
 
         # define the post_fusion layers
@@ -211,6 +211,6 @@ class LMF(nn.Module):
         output = torch.matmul(self.fusion_weights, fusion_zy.permute(1, 0, 2)).squeeze() + self.fusion_bias
         output = output.view(-1, self.output_dim)
         if self.use_softmax:
-            output = F.softmax(output)
+            output = F.softmax(output, dim=-1)
         # print("output:", output.shape)
         return output

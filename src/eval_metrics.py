@@ -66,7 +66,7 @@ def eval_iemocap(results, truths, single=-1):
     if single < 0:
         test_preds = results.view(-1, 4, 2).cpu().detach().numpy()
         test_truth = truths.view(-1, 4).cpu().detach().numpy()
-        
+
         for emo_ind in range(4):
             print(f"{emos[emo_ind]}: ")
             test_preds_i = np.argmax(test_preds[:,emo_ind],axis=1)
@@ -78,7 +78,7 @@ def eval_iemocap(results, truths, single=-1):
     else:
         test_preds = results.view(-1, 2).cpu().detach().numpy()
         test_truth = truths.view(-1).cpu().detach().numpy()
-        
+
         print(f"{emos[single]}: ")
         test_preds_i = np.argmax(test_preds,axis=1)
         test_truth_i = test_truth
@@ -89,9 +89,18 @@ def eval_iemocap(results, truths, single=-1):
 
 
 def eval_dna(results, truths):
+    # 若是4维向量，则将前两个维度合并
+    if len(results.shape) == 4:
+        results = results.view(-1, 260, 4)
+        truths = truths.view(-1, 260, 4)
+
     index_to_base = ['A', 'C', 'G', 'T']
     base_arr = np.array([1, 1, 1, 1])
+    if results.is_cuda:
+        results = results.cpu()
     results = results.numpy()
+    if truths.is_cuda:
+        truths = truths.cpu()
     truths = truths.numpy()
     results_indices = np.argmax(results, axis=-1)
     truths_indices = np.argmax(truths, axis=-1)

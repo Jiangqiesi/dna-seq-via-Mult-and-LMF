@@ -29,41 +29,41 @@ parser.add_argument('--data_path', type=str, default='data',
                     help='path for storing the dataset')
 
 # Dropouts
-parser.add_argument('--attn_dropout', type=float, default=0.1,
+parser.add_argument('--attn_dropout', type=float, default=0.0,
                     help='attention dropout')
 parser.add_argument('--attn_dropout_c', type=float, default=0.0,
                     help='attention dropout (for seqs)')
 parser.add_argument('--attn_dropout_q', type=float, default=0.0,
                     help='attention dropout (for quas)')
-parser.add_argument('--relu_dropout', type=float, default=0.1,
+parser.add_argument('--relu_dropout', type=float, default=0.0,
                     help='relu dropout')
-parser.add_argument('--embed_dropout', type=float, default=0.25,
+parser.add_argument('--embed_dropout', type=float, default=0.0,
                     help='embedding dropout')
-parser.add_argument('--res_dropout', type=float, default=0.1,
+parser.add_argument('--res_dropout', type=float, default=0.0,
                     help='residual block dropout')
 parser.add_argument('--out_dropout', type=float, default=0.0,
                     help='output layer dropout')
 
 # Architecture
 # TODO: 待定nlevels, num_heads
-parser.add_argument('--nlevels', type=int, default=5,
+parser.add_argument('--nlevels', type=int, default=6,
                     help='number of layers in the network (default: 5)')
-parser.add_argument('--num_heads', type=int, default=2,
+parser.add_argument('--num_heads', type=int, default=4,
                     help='number of heads for the transformer network (default: 2)')
 parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: true)')
 
 # Tuning
-parser.add_argument('--batch_size', type=int, default=47, metavar='N',
-                    help='batch size (default: 47)')
+parser.add_argument('--batch_size', type=int, default=1, metavar='N',
+                    help='batch size (default: 1)')
 parser.add_argument('--clip', type=float, default=0.8,
                     help='gradient clip value (default: 0.8)')
 parser.add_argument('--lr', type=float, default=5e-3,
                     help='initial learning rate (default: 5e-3)')
 parser.add_argument('--optim', type=str, default='Adam',
                     help='optimizer to use (default: Adam)')
-parser.add_argument('--num_epochs', type=int, default=40,
-                    help='number of epochs (default: 40)')
+parser.add_argument('--num_epochs', type=int, default=100,
+                    help='number of epochs (default: 100)')
 parser.add_argument('--when', type=int, default=20,
                     help='when to decay learning rate (default: 20)')
 parser.add_argument('--batch_chunk', type=int, default=1,
@@ -101,7 +101,8 @@ criterion_dict = {
     'iemocap': 'CrossEntropyLoss'
 }
 
-torch.set_default_tensor_type('torch.FloatTensor')
+# torch.set_default_tensor_type('torch.FloatTensor')
+torch.set_default_dtype(torch.float32)
 if torch.cuda.is_available():
     if args.no_cuda:
         print("WARNING: You have a CUDA device, so you should probably not run with --no_cuda")
@@ -133,9 +134,9 @@ print("Quality dimension is: {}".format(qua.shape))
 ori_seq = train_data[0][1]
 print("Original sequence dimension is: {}".format(ori_seq.shape))
    
-train_loader = DataLoader(train_data, batch_size=1, shuffle=False)
-valid_loader = DataLoader(valid_data, batch_size=1, shuffle=False)
-test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
+train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=False)
+valid_loader = DataLoader(valid_data, batch_size=args.batch_size, shuffle=False)
+test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
 
 print('Finish loading the data....')
 if not args.aligned:
@@ -171,6 +172,8 @@ print('hyp_params.orig_d_q: {}'.format(hyp_params.orig_d_q))
 print('hyp_params.orig_d_f: {}'.format(hyp_params.orig_d_f))
 hyp_params.c_len, hyp_params.q_len, hyp_params.v_len = train_data.get_seq_len()
 print('hyp_params.c_len: {}'.format(hyp_params.c_len))
+hyp_params.group_size = train_data.get_group_size()
+print('hyp_params.group_size: {}'.format(hyp_params.group_size))
 hyp_params.rank = random.choice(params['rank'])
 hyp_params.seq_dim, hyp_params.qua_dim = seq_dim, qua_dim
 # output_dim criterion待修改
