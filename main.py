@@ -172,6 +172,8 @@ print('hyp_params.orig_d_q: {}'.format(hyp_params.orig_d_q))
 print('hyp_params.orig_d_f: {}'.format(hyp_params.orig_d_f))
 hyp_params.c_len, hyp_params.q_len, hyp_params.v_len = train_data.get_seq_len()
 print('hyp_params.c_len: {}'.format(hyp_params.c_len))
+hyp_params.group_size = train_data.get_group_size()
+print('hyp_params.group_size: {}'.format(hyp_params.group_size))
 hyp_params.rank = random.choice(params['rank'])
 hyp_params.seq_dim, hyp_params.qua_dim = seq_dim, qua_dim
 # output_dim criterion待修改

@@ -89,6 +89,11 @@ def eval_iemocap(results, truths, single=-1):
 
 
 def eval_dna(results, truths):
+    # 若是4维向量，则将前两个维度合并
+    if len(results.shape) == 4:
+        results = results.view(-1, 260, 4)
+        truths = truths.view(-1, 260, 4)
+
     index_to_base = ['A', 'C', 'G', 'T']
     base_arr = np.array([1, 1, 1, 1])
     if results.is_cuda:

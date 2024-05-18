@@ -31,7 +31,7 @@ def initiate(hyp_params, train_loader, valid_loader, test_loader):
     criterion = getattr(nn, hyp_params.criterion)()
 
     # 优化器改进
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=hyp_params.when, factor=0.1, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=hyp_params.when, factor=0.1)
     settings = {'model': model,
                 'optimizer': optimizer,
                 'criterion': criterion,
@@ -180,6 +180,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                 if batch_size < hyp_params.batch_size:
                     break
 
+                # print(f"Batch {i_batch} , Batch size {batch_size} , seqs shape {seqs.shape} , quas shape {quas.shape} , eval_attr shape {eval_attr.shape}")
                 # if (ctc_a2l_module is not None) and (ctc_v2l_module is not None):
                 #     ctc_a2l_net = nn.DataParallel(ctc_a2l_module) if batch_size > 10 else ctc_a2l_module
                 #     ctc_v2l_net = nn.DataParallel(ctc_v2l_module) if batch_size > 10 else ctc_v2l_module

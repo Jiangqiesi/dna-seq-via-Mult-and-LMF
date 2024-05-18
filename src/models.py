@@ -14,7 +14,9 @@ class MULTModel(nn.Module):
         # TODO: 跨膜transformer输入出错，其中一个输入应当为LMF后的X_f
         super(MULTModel, self).__init__()
         # self.orig_d_l, self.orig_d_a, self.orig_d_v = hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v
-        self.orig_d_c, self.orig_d_q, self.orig_d_f = hyp_params.orig_d_c * 47, hyp_params.orig_d_q * 47, hyp_params.orig_d_f * 47
+        self.orig_d_c, self.orig_d_q, self.orig_d_f = (hyp_params.orig_d_c * hyp_params.group_size,
+                                                       hyp_params.orig_d_q * hyp_params.group_size,
+                                                       hyp_params.orig_d_f * hyp_params.group_size)
         # self.d_l, self.d_a, self.d_v = 30, 30, 30
         self.d_c, self.d_q, self.d_f = 256, 256, 256
         self.vonly = hyp_params.vonly
