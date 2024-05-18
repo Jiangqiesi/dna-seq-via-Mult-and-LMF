@@ -58,9 +58,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         proc_loss, proc_size = 0, 0
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
-            # 小规模输入截断
-            if i_batch > 1000:
-                break
+            # # 小规模输入截断
+            # if i_batch > 10:
+            #     break
             # print("Batch:", i_batch)
             sample_ind, seqs, quas = batch_X
             # 如果seqs是Tensor，确保使用PyTorch的方法
@@ -78,10 +78,10 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             if seqs_is_zero or quas_is_zero:
                 continue
 
-            # # 由于实际的batch_size=1，所以需要对第一个维度折叠
-            # seqs = seqs.squeeze(0)
-            # quas = quas.squeeze(0)
-            eval_attr = batch_Y
+            # 由于实际的batch_size=1，所以需要对第一个维度折叠
+            seqs = seqs.squeeze(0)
+            quas = quas.squeeze(0)
+            eval_attr = batch_Y.squeeze(0)
 
             model.zero_grad()
 
@@ -144,7 +144,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             proc_loss += raw_loss.item() * batch_size
             proc_size += batch_size
             epoch_loss += combined_loss.item() * batch_size
-            if i_batch % hyp_params.log_interval == 0 and i_batch > 0:
+            if i_batch % 10 == 0 and i_batch > 0:
                 avg_loss = proc_loss / proc_size
                 elapsed_time = time.time() - start_time
                 print('Epoch {:2d} | Batch {:3d}/{:3d} | Time/Batch(ms) {:5.2f} | Train Loss {:5.4f}'.
@@ -164,6 +164,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
 
         with torch.no_grad():
             for i_batch, (batch_X, batch_Y) in enumerate(loader):
+                # if i_batch > 1:
+                #     break
                 sample_ind, seqs, quas = batch_X
                 # 由于实际的batch_size=1，所以需要对第一个维度折叠
                 seqs = seqs.squeeze(0)

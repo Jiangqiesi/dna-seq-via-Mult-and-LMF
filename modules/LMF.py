@@ -74,7 +74,7 @@ class TextSubNet(nn.Module):
         '''
         _, final_states = self.rnn(x)
         h = self.dropout(final_states[0].squeeze())
-        y_1 = self.linear_1(h) if self.hidden_size == self.out_size else h
+        y_1 = self.linear_1(h)  # if self.hidden_size == self.out_size else h
         return y_1
 
 

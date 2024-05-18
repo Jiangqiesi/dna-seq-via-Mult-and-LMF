@@ -14,11 +14,11 @@ class MULTModel(nn.Module):
         # TODO: 跨膜transformer输入出错，其中一个输入应当为LMF后的X_f
         super(MULTModel, self).__init__()
         # self.orig_d_l, self.orig_d_a, self.orig_d_v = hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v
-        self.orig_d_c, self.orig_d_q, self.orig_d_f = (hyp_params.orig_d_c * hyp_params.group_size,
-                                                       hyp_params.orig_d_q * hyp_params.group_size,
-                                                       hyp_params.orig_d_f * hyp_params.group_size)
+        self.orig_d_c, self.orig_d_q, self.orig_d_f = (hyp_params.orig_d_c,
+                                                       hyp_params.orig_d_q,
+                                                       hyp_params.orig_d_f)
         # self.d_l, self.d_a, self.d_v = 30, 30, 30
-        self.d_c, self.d_q, self.d_f = 256, 256, 256
+        self.d_c, self.d_q, self.d_f = 64, 64, 64
         self.vonly = hyp_params.vonly
         self.aonly = hyp_params.aonly
         self.lonly = hyp_params.lonly
@@ -127,20 +127,26 @@ class MULTModel(nn.Module):
         """
         # 张量4维时：
         # batch_size可能会变
-        batch_size = x_c.size(0)
-        x_c_tmp = x_c.permute(0, 2, 1, 3)
-        x_q_tmp = x_q.permute(0, 2, 1, 3)
-        x_c = x_c_tmp.reshape(batch_size, self.seq_dim, self.orig_d_c)
-        x_q = x_q_tmp.reshape(batch_size, self.qua_dim, self.orig_d_q)
+        if len(x_c.size()) == 4:
+            batch_size = x_c.size(0)
+            x_c_tmp = x_c.permute(0, 2, 1, 3)
+            x_q_tmp = x_q.permute(0, 2, 1, 3)
+            x_c = x_c_tmp.reshape(batch_size, self.seq_dim, self.orig_d_c)
+            x_q = x_q_tmp.reshape(batch_size, self.qua_dim, self.orig_d_q)
 
         # TODO: 可能有些地方要改，比如是否要先LMF再转置
+        # 先转置到 [seq_len, batch_size, n_features]
+        x_c = x_c.transpose(0, 1)
+        x_q = x_q.transpose(0, 1)   # Dimension (L, N, d_x)
+
         # 在这里先进行LMF
         # print("Input shape of x_c:", x_c.shape)
         # print("Input shape of x_q:", x_q.shape)
-        x_f = self.LMF_f_with_cq(x_c, x_q)
+        x_f = self.LMF_f_with_cq(x_c, x_q)  # Dimension (L, d_f)
 
-        x_c = F.dropout(x_c.transpose(1, 2), p=self.embed_dropout, training=self.training)
-        x_q = x_q.transpose(1, 2)
+        # 转置到 [batch_size, n_features, seq_len]
+        x_c = F.dropout(x_c.permute(1, 2, 0), p=self.embed_dropout, training=self.training)
+        x_q = x_q.permute(1, 2, 0)
 
         # Project the textual/visual/audio features
         # 特征投影
@@ -149,8 +155,9 @@ class MULTModel(nn.Module):
         # 重新排列: 为了适应后续的处理流程，对投影后的特征进行维度的重新排列，使其变为[seq_len, batch_size, n_features]。
         proj_x_c = x_c if self.orig_d_c == self.d_c else self.proj_c(x_c)
         proj_x_q = x_q if self.orig_d_q == self.d_q else self.proj_q(x_q)
-        proj_x_c = proj_x_c.permute(2, 0, 1)
-        proj_x_q = proj_x_q.permute(2, 0, 1)
+        # 转置到 [batch_sizes, seq_len, n_feature]
+        proj_x_c = proj_x_c.transpose(1, 2)
+        proj_x_q = proj_x_q.transpose(1, 2)
         # 对x_f也进行conv1d操作
         # x_f = x_f.transpose(0, 1)
         x_f = x_f.unsqueeze(-1)
@@ -173,7 +180,7 @@ class MULTModel(nn.Module):
         # print("shape of h_c_with_f:", h_c_with_f.shape)
         h_c = self.trans_c_mem(h_c_with_f)
         # print("shape of h_c:", h_c.shape)
-        last_h_c = h_c  # [-1]
+        last_h_c = h_c[-1]
         # for i in range(0, 5):
         #     print("last_h_c[0][{}]=:{}".format(i, last_h_c[0][i]))
         # print("last_h_c:", last_h_c.shape)
@@ -181,7 +188,7 @@ class MULTModel(nn.Module):
         h_q_with_f = self.trans_q_with_f(proj_x_q, proj_x_f, proj_x_f)
         h_q = self.trans_q_mem(h_q_with_f)
         # print("shape of h_q:", h_q.shape)
-        last_h_q = h_q  # [-1]
+        last_h_q = h_q[-1]
         # for i in range(0, 5):
         #     print("last_h_q[0][{}]=:{}".format(i, last_h_q[0][i]))
         # 聚合和预测
@@ -211,7 +218,7 @@ class MULTModel(nn.Module):
 
         # A residual block
         last_hs = torch.cat([last_h_c, last_h_q], dim=-1)
-        last_hs = last_hs.transpose(0, 1)
+        # last_hs = last_hs.transpose(0, 1)
         last_hs_proj = self.proj2(F.dropout(F.sigmoid(self.proj1(last_hs)), p=self.out_dropout, training=self.training))
         last_hs_proj += last_hs
         # print("shape of last_hs_proj:", last_hs_proj.shape)
