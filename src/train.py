@@ -58,9 +58,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         proc_loss, proc_size = 0, 0
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
-            # # 小规模输入截断
-            # if i_batch > 1000:
-            #     break
+            # 小规模输入截断
+            if i_batch > 10:
+                break
             # print("Batch:", i_batch)
             sample_ind, seqs, quas = batch_X
             # 如果seqs是Tensor，确保使用PyTorch的方法
@@ -164,6 +164,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
 
         with torch.no_grad():
             for i_batch, (batch_X, batch_Y) in enumerate(loader):
+                if i_batch > 1:
+                    break
                 sample_ind, seqs, quas = batch_X
                 # 由于实际的batch_size=1，所以需要对第一个维度折叠
                 seqs = seqs.squeeze(0)
@@ -198,7 +200,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                 results.append(preds)
                 truths.append(eval_attr)
 
-        avg_loss = total_loss / (hyp_params.n_test if test else hyp_params.n_valid)
+        avg_loss = total_loss / 2   # (hyp_params.n_test if test else hyp_params.n_valid)
 
         results = torch.cat(results)
         truths = torch.cat(truths)

@@ -140,8 +140,8 @@ class LMF(nn.Module):
         # 子网络的初始化：
         # 使用SubNet为音频和视频数据初始化预处理网络。
         # 使用TextSubNet为文本数据初始化基于LSTM的预处理网络。
-        self.seqs_subnet = TextSubNet(4, self.seqs_hidden, self.text_out)
-        self.quas_subnet = TextSubNet(1, self.quas_hidden, self.text_out)
+        self.seqs_subnet = TextSubNet(self.seqs_in, self.seqs_hidden, self.text_out)
+        self.quas_subnet = TextSubNet(self.quas_in, self.quas_hidden, self.text_out)
         # self.text_subnet = TextSubNet(self.text_in, self.text_hidden, self.text_out, dropout=self.text_prob)
 
         # define the post_fusion layers

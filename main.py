@@ -29,17 +29,17 @@ parser.add_argument('--data_path', type=str, default='data',
                     help='path for storing the dataset')
 
 # Dropouts
-parser.add_argument('--attn_dropout', type=float, default=0.1,
+parser.add_argument('--attn_dropout', type=float, default=0.0,
                     help='attention dropout')
 parser.add_argument('--attn_dropout_c', type=float, default=0.0,
                     help='attention dropout (for seqs)')
 parser.add_argument('--attn_dropout_q', type=float, default=0.0,
                     help='attention dropout (for quas)')
-parser.add_argument('--relu_dropout', type=float, default=0.1,
+parser.add_argument('--relu_dropout', type=float, default=0.0,
                     help='relu dropout')
-parser.add_argument('--embed_dropout', type=float, default=0.25,
+parser.add_argument('--embed_dropout', type=float, default=0.0,
                     help='embedding dropout')
-parser.add_argument('--res_dropout', type=float, default=0.1,
+parser.add_argument('--res_dropout', type=float, default=0.0,
                     help='residual block dropout')
 parser.add_argument('--out_dropout', type=float, default=0.0,
                     help='output layer dropout')
@@ -70,8 +70,8 @@ parser.add_argument('--batch_chunk', type=int, default=1,
                     help='number of chunks per batch (default: 1)')
 
 # Logistics
-parser.add_argument('--log_interval', type=int, default=30,
-                    help='frequency of result logging (default: 30)')
+parser.add_argument('--log_interval', type=int, default=10,
+                    help='frequency of result logging (default: 10)')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--no_cuda', action='store_true',
