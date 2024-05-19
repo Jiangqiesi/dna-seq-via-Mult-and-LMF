@@ -16,7 +16,7 @@ class MULTModel(nn.Module):
         # self.orig_d_l, self.orig_d_a, self.orig_d_v = hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v
         self.orig_d_c, self.orig_d_q, self.orig_d_f = hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f
         # self.d_l, self.d_a, self.d_v = 30, 30, 30
-        self.d_c, self.d_q, self.d_f = 4, 4, 4
+        self.d_c, self.d_q, self.d_f = 64, 64, 64
         self.vonly = hyp_params.vonly
         self.aonly = hyp_params.aonly
         self.lonly = hyp_params.lonly
@@ -33,6 +33,7 @@ class MULTModel(nn.Module):
         self.rank = hyp_params.rank
         self.seq_dim, self.qua_dim = hyp_params.seq_dim, hyp_params.qua_dim
         self.batch_size = hyp_params.batch_size
+        self.group_size = hyp_params.group_size
 
         # combined_dim = self.d_l + self.d_a + self.d_v
         combined_dim = self.d_c + self.d_q
@@ -57,13 +58,13 @@ class MULTModel(nn.Module):
         # print("Audio feature dimension is: {}".format(audio_dim))
         # print("seq feature dimension is: {}".format(self.seq_dim))
 
-        self.LMF_f_with_cq = LMF((self.seq_dim, self.qua_dim), hidden_dims, text_out, dropouts, output_dim, self.rank)
+        self.LMF_f_with_cq = LMF(input_dims, hidden_dims, text_out, dropouts, self.orig_d_f, self.rank)
 
         # 二：再跨膜transformer
         # 1. Temporal convolutional layers
-        self.proj_c = nn.Conv1d(4, self.d_c, kernel_size=1, padding=0, bias=False)
-        self.proj_q = nn.Conv1d(1, self.d_q, kernel_size=1, padding=0, bias=False)
-        self.proj_f = nn.Conv1d(1, self.d_f, kernel_size=1, padding=0, bias=False)
+        self.proj_c = nn.Conv1d(self.orig_d_c, self.d_c, kernel_size=1, padding=0, bias=False)
+        self.proj_q = nn.Conv1d(self.orig_d_q, self.d_q, kernel_size=1, padding=0, bias=False)
+        self.proj_f = nn.Conv1d(self.orig_d_f, self.d_f, kernel_size=1, padding=0, bias=False)
 
         # 2. Crossmodal Attentions
         # lonly --> x_c; aonly  --> x_q
@@ -81,9 +82,9 @@ class MULTModel(nn.Module):
         # Projection layers
         # TODO: 待修改
         # 方案2.47->1
-        self.proj0_1 = nn.Linear(self.batch_size, self.batch_size)
-        self.proj0_2 = nn.Linear(self.batch_size, self.batch_size)
-        self.proj0 = nn.Linear(self.batch_size, 1)
+        self.proj0_1 = nn.Linear(self.group_size, self.group_size)
+        self.proj0_2 = nn.Linear(self.group_size, self.group_size)
+        self.proj0 = nn.Linear(self.group_size, 1)
         # # 方案1.94->1
         # self.proj0_1 = nn.Linear(self.batch_size * 2, self.batch_size * 2)
         # self.proj0_2 = nn.Linear(self.batch_size * 2, self.batch_size * 2)
@@ -185,7 +186,7 @@ class MULTModel(nn.Module):
         last_hs = last_hs.transpose(1, 2)
         # [260,8,47]->[260,8]
         last_hs_1 = self.proj0_2(F.dropout(F.sigmoid(self.proj0_1(last_hs)), p=self.embed_dropout, training=self.training))
-        last_hs += last_hs_1
+        last_hs = last_hs + last_hs_1
         last_hs = self.proj0(last_hs)
         last_hs = last_hs.squeeze(dim=-1)
         # print("shape of last_hs:", last_hs.shape)
@@ -201,7 +202,7 @@ class MULTModel(nn.Module):
 
         # A residual block
         last_hs_proj = self.proj2(F.dropout(F.sigmoid(self.proj1(last_hs)), p=self.out_dropout, training=self.training))
-        last_hs_proj += last_hs
+        last_hs_proj = last_hs_proj + last_hs
         # print("shape of last_hs_proj:", last_hs_proj.shape)
 
         output = F.sigmoid(self.out_layer(last_hs_proj)) #if False else last_hs

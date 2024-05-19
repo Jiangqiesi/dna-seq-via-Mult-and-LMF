@@ -95,8 +95,15 @@ class multiseqs_datasets(Dataset):
 
         self.n_modalities = 2
 
+        self.ori_seqs_tag, self.seqs_tag, self.quas_tag = self.ori_seqs[:, :], self.seqs[:, :10, :], self.quas[:, :10, :]
+
     def get_n_modalities(self):
         return self.n_modalities
+
+    # 获取组数
+    def get_group_size(self):
+        # return self.seqs_tag.shape[1]
+        return 10
 
     def get_seq_len(self):
         return self.seqs.shape[2], self.quas.shape[2], self.ori_seqs.shape[1]
@@ -111,10 +118,13 @@ class multiseqs_datasets(Dataset):
         # div = int(idx / 47)
         # rem = idx % 47
         if idx <= 13061:
-            x = (idx, self.seqs[idx, :], self.quas[idx, :])
+            x = (idx, self.seqs[idx, :10, :], self.quas[idx, :10, :])
+            y = self.ori_seqs[idx, :]
         else:
             x = (idx, self.seqs[idx, :5, :], self.quas[idx, :5, :])
-        y = self.ori_seqs[idx, :]
+            y = self.ori_seqs[idx, :]
+        # _x = (idx, torch.abs(x[1] - 1), torch.abs(x[2] - 1))
+        # _y = torch.abs(y - 1)
         return x, y
 
 

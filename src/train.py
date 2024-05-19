@@ -54,7 +54,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
     def train(model, optimizer, criterion):
         epoch_loss = 0
         model.train()
-        num_batches = hyp_params.n_train    # // hyp_params.batch_size
+        num_batches = hyp_params.n_train // hyp_params.batch_size
         proc_loss, proc_size = 0, 0
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
@@ -227,6 +227,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             best_valid = val_loss
 
     model = load_model(hyp_params, name=hyp_params.name)
+    # 计算参数数量
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f'Total number of parameters: {total_params}')
     _, results, truths = evaluate(model, criterion, test=True)
     print("results shape:", results.shape)
     print("results:", results)

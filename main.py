@@ -46,16 +46,16 @@ parser.add_argument('--out_dropout', type=float, default=0.0,
 
 # Architecture
 # TODO: 待定nlevels, num_heads
-parser.add_argument('--nlevels', type=int, default=5,
-                    help='number of layers in the network (default: 5)')
-parser.add_argument('--num_heads', type=int, default=2,
-                    help='number of heads for the transformer network (default: 2)')
+parser.add_argument('--nlevels', type=int, default=6,
+                    help='number of layers in the network (default: 6)')
+parser.add_argument('--num_heads', type=int, default=4,
+                    help='number of heads for the transformer network (default: 4)')
 parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: true)')
 
 # Tuning
-parser.add_argument('--batch_size', type=int, default=47, metavar='N',
-                    help='batch size (default: 47)')
+parser.add_argument('--batch_size', type=int, default=1, metavar='N',
+                    help='batch size (default: 1)')
 parser.add_argument('--clip', type=float, default=0.8,
                     help='gradient clip value (default: 0.8)')
 parser.add_argument('--lr', type=float, default=5e-3,
@@ -133,9 +133,9 @@ print("Quality dimension is: {}".format(qua.shape))
 ori_seq = train_data[0][1]
 print("Original sequence dimension is: {}".format(ori_seq.shape))
    
-train_loader = DataLoader(train_data, batch_size=1, shuffle=False)
-valid_loader = DataLoader(valid_data, batch_size=1, shuffle=False)
-test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
+train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=False)
+valid_loader = DataLoader(valid_data, batch_size=args.batch_size, shuffle=False)
+test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
 
 print('Finish loading the data....')
 if not args.aligned:
@@ -171,6 +171,7 @@ print('hyp_params.orig_d_q: {}'.format(hyp_params.orig_d_q))
 print('hyp_params.orig_d_f: {}'.format(hyp_params.orig_d_f))
 hyp_params.c_len, hyp_params.q_len, hyp_params.v_len = train_data.get_seq_len()
 print('hyp_params.c_len: {}'.format(hyp_params.c_len))
+hyp_params.group_size = train_data.get_group_size()
 hyp_params.rank = random.choice(params['rank'])
 hyp_params.seq_dim, hyp_params.qua_dim = seq_dim, qua_dim
 # output_dim criterion待修改
