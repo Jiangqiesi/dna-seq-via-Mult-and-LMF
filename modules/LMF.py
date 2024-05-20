@@ -48,7 +48,7 @@ class TextSubNet(nn.Module):
     The LSTM-based subnetwork that is used in LMF for text
     '''
 
-    def __init__(self, in_size, hidden_size, out_size, num_layers=1, dropout=0.2, bidirectional=False):
+    def __init__(self, in_size, hidden_size, out_size, num_layers=1, dropout=0, bidirectional=False):
         '''
         Args:
             in_size: input dimension
@@ -176,6 +176,7 @@ class LMF(nn.Module):
         seqs_h = self.seqs_subnet(seqs_x)
         quas_h = self.quas_subnet(quas_x)
         # text_h = self.text_subnet(text_x)
+        # print("seqs_h:", seqs_h.shape)
         batch_size = seqs_h.data.shape[0]
 
         # 低秩多模态融合：
