@@ -210,6 +210,7 @@ class LMF(nn.Module):
         # output = torch.sum(fusion_zy, dim=0).squeeze()
         # use linear transformation instead of simple summation, more flexibility
         output = torch.matmul(self.fusion_weights, fusion_zy.permute(1, 0, 2)).squeeze() + self.fusion_bias
+        # print("LMF output:", output.shape)
         output = output.view(-1, self.output_dim)
         if self.use_softmax:
             output = F.softmax(output, dim=-1)

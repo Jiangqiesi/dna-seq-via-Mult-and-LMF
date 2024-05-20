@@ -71,6 +71,10 @@ class multiseqs_datasets(Dataset):
         data3 = os.path.join(dataset_path, data3)
         dataset3 = pickle.load(open(data3, 'rb'))
 
+        # 对顺序编码的dna序列数组归一化处理
+        dataset1 = dataset1 / 4
+        dataset2 = dataset2 / 4
+
         if split_type == 'train':
             dataset1 = dataset1[:int(0.6 * len(dataset1))]
             dataset2 = dataset2[:int(0.6 * len(dataset2))]
@@ -85,8 +89,8 @@ class multiseqs_datasets(Dataset):
             dataset3 = dataset3[int(0.8 * len(dataset3)):]
         self.seqs = torch.tensor(dataset2.astype(np.float32)).cpu().detach()
         # 对于质量值，提高一个维度
-        quas_expended = np.expand_dims(dataset3, axis=-1)
-        self.quas = torch.tensor(quas_expended.astype(np.float32)).cpu().detach()
+        # quas_expended = np.expand_dims(dataset3, axis=-1)
+        self.quas = torch.tensor(dataset3.astype(np.float32)).cpu().detach()
         self.ori_seqs = torch.tensor(dataset1.astype(np.float32)).cpu().detach()
 
         self.data1 = data1
@@ -102,10 +106,10 @@ class multiseqs_datasets(Dataset):
         return 10
 
     def get_seq_len(self):
-        return self.seqs.shape[2], self.quas.shape[2], self.ori_seqs.shape[1]
+        return self.seqs.shape[1], self.quas.shape[1], self.ori_seqs.shape[1]
 
     def get_dim(self):
-        return self.seqs.shape[3], self.quas.shape[3],  self.ori_seqs.shape[2]
+        return 1, 1, 1
 
     def __len__(self):
         return self.ori_seqs.shape[0]
@@ -114,7 +118,7 @@ class multiseqs_datasets(Dataset):
         # div = int(idx / 47)
         # rem = idx % 47
         if idx <= 13061:
-            x = (idx, self.seqs[idx, :10], self.quas[idx, :10])
+            x = (idx, self.seqs[idx, :10, :], self.quas[idx, :10, :])
         else:
             x = (idx, self.seqs[idx, :5, :], self.quas[idx, :5, :])
         y = self.ori_seqs[idx, :]

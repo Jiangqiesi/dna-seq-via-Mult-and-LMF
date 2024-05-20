@@ -54,8 +54,8 @@ parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: true)')
 
 # Tuning
-parser.add_argument('--batch_size', type=int, default=1, metavar='N',
-                    help='batch size (default: 1)')
+parser.add_argument('--batch_size', type=int, default=24, metavar='N',
+                    help='batch size (default: 24)')
 parser.add_argument('--clip', type=float, default=0.8,
                     help='gradient clip value (default: 0.8)')
 parser.add_argument('--lr', type=float, default=5e-3,
@@ -164,7 +164,7 @@ hyp_params.model = str.upper(args.model.strip())
 # hyp_params.output_dim = output_dim_dict.get(dataset, 1)
 hyp_params.output_dim = 4
 # BCELoss, CrossEntropyLoss
-hyp_params.criterion = criterion_dict.get(dataset, 'BCELoss')
+hyp_params.criterion = criterion_dict.get(dataset, 'L1Loss')
 # TODO:修改超参数 注意对应dataset类的函数返回值
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
 print('hyp_params.orig_d_c: {}'.format(hyp_params.orig_d_c))
