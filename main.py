@@ -47,9 +47,9 @@ parser.add_argument('--out_dropout', type=float, default=0.0,
 # Architecture
 # TODO: 待定nlevels, num_heads
 parser.add_argument('--nlevels', type=int, default=6,
-                    help='number of layers in the network (default: 5)')
+                    help='number of layers in the network (default: 6)')
 parser.add_argument('--num_heads', type=int, default=4,
-                    help='number of heads for the transformer network (default: 2)')
+                    help='number of heads for the transformer network (default: 4)')
 parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: true)')
 
@@ -164,7 +164,7 @@ hyp_params.model = str.upper(args.model.strip())
 # hyp_params.output_dim = output_dim_dict.get(dataset, 1)
 hyp_params.output_dim = 4
 # BCELoss, CrossEntropyLoss
-hyp_params.criterion = criterion_dict.get(dataset, 'L1Loss')
+hyp_params.criterion = criterion_dict.get(dataset, 'BCELoss')
 # TODO:修改超参数 注意对应dataset类的函数返回值
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
 print('hyp_params.orig_d_c: {}'.format(hyp_params.orig_d_c))

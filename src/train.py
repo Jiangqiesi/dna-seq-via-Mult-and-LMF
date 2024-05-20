@@ -58,9 +58,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         proc_loss, proc_size = 0, 0
         start_time = time.time()
         for i_batch, (batch_X, batch_Y) in enumerate(train_loader):
-            # 小规模输入截断
-            if i_batch > 100:
-                break
+            # # 小规模输入截断
+            # if i_batch > 100:
+            #     break
             # print("Batch:", i_batch)
             sample_ind, seqs, quas = batch_X
             # 如果seqs是Tensor，确保使用PyTorch的方法
@@ -99,8 +99,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             # CTC
 
             combined_loss = 0
-            # net = nn.DataParallel(model) if batch_size > 10 else model
-            net = model
+            net = nn.DataParallel(model) if batch_size > 10 else model
+            # net = model
             if batch_chunk > 1:
                 raw_loss = combined_loss = 0
                 seqs_chunks = seqs.chunk(batch_chunk, dim=0)
@@ -164,8 +164,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
 
         with torch.no_grad():
             for i_batch, (batch_X, batch_Y) in enumerate(loader):
-                if i_batch > 4:
-                    break
+                # if i_batch > 4:
+                #     break
                 sample_ind, seqs, quas = batch_X
                 # 由于实际的batch_size=1，所以需要对第一个维度折叠
                 seqs = seqs.squeeze(0)
@@ -203,34 +203,34 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                 results.append(preds)
                 truths.append(eval_attr)
 
-        # avg_loss = total_loss / (hyp_params.n_test if test else hyp_params.n_valid)
-        avg_loss = total_loss / batch_size / 5
+        avg_loss = total_loss / (hyp_params.n_test if test else hyp_params.n_valid)
+        # avg_loss = total_loss / batch_size / 5
 
         results = torch.cat(results)
         truths = torch.cat(truths)
         return avg_loss, results, truths
 
     best_valid = 1e8
-    for epoch in range(1, hyp_params.num_epochs + 1):
-        start = time.time()
-        train(model, optimizer, criterion)
-        val_loss, _, _ = evaluate(model, criterion, test=False)
-        test_loss, _, _ = evaluate(model, criterion, test=True)
-
-        end = time.time()
-        duration = end - start
-        scheduler.step(val_loss)  # Decay learning rate by validation loss
-
-        print("-" * 50)
-        print(
-            'Epoch {:2d} | Time {:5.4f} sec | Valid Loss {:5.4f} | Test Loss {:5.4f}'.format(epoch, duration, val_loss,
-                                                                                             test_loss))
-        print("-" * 50)
-
-        if val_loss < best_valid:
-            print(f"Saved model at pre_trained_models/{hyp_params.name}.pt!")
-            save_model(hyp_params, model, name=hyp_params.name)
-            best_valid = val_loss
+    # for epoch in range(1, hyp_params.num_epochs + 1):
+    #     start = time.time()
+    #     train(model, optimizer, criterion)
+    #     val_loss, _, _ = evaluate(model, criterion, test=False)
+    #     test_loss, _, _ = evaluate(model, criterion, test=True)
+    #
+    #     end = time.time()
+    #     duration = end - start
+    #     scheduler.step(val_loss)  # Decay learning rate by validation loss
+    #
+    #     print("-" * 50)
+    #     print(
+    #         'Epoch {:2d} | Time {:5.4f} sec | Valid Loss {:5.4f} | Test Loss {:5.4f}'.format(epoch, duration, val_loss,
+    #                                                                                          test_loss))
+    #     print("-" * 50)
+    #
+    #     if val_loss < best_valid:
+    #         print(f"Saved model at pre_trained_models/{hyp_params.name}.pt!")
+    #         save_model(hyp_params, model, name=hyp_params.name)
+    #         best_valid = val_loss
 
     model = load_model(hyp_params, name=hyp_params.name)
     # 计算参数数量

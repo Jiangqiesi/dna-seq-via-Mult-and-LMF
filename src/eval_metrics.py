@@ -93,6 +93,14 @@ def eval_dna(results, truths):
     if len(results.shape) == 4:
         results = results.view(-1, 260, 4)
         truths = truths.view(-1, 260, 4)
+    elif len(results.shape) == 3:
+        results = results.view(-1, 260)
+        truths = truths.view(-1, 260)
+
+    # # 顺序编码还原
+    # results = results * 4
+    # truths = truths * 4
+    ranges = [0.5, 1.5, 2.5, 3.5, 5]
 
     index_to_base = ['A', 'C', 'G', 'T']
     base_arr = np.array([1, 1, 1, 1])
@@ -111,7 +119,7 @@ def eval_dna(results, truths):
     list_of_truths = []
     list_of_confidence = []
     list_of_mean = []
-    for i in range(0, results_indices.shape[0]):
+    for i in range(0, truths.shape[0]):
         result_str = ""
         truth_str = ""
 
@@ -121,9 +129,14 @@ def eval_dna(results, truths):
         # 计算置信度
         # confidence_scores = results[np.arange(results.shape[1]), results_indices[i]]
         # mean_confidence = np.mean(confidence_scores[correct_predictions])
-        for j in range(0, results_indices.shape[1]):
+        for j in range(0, truths.shape[1]):
             result_str = result_str + index_to_base[results_indices[i][j]]
             truth_str = truth_str + index_to_base[truths_indices[i][j]]
+            # truth_str = truth_str + index_to_base[int(truths[i][j])]
+            # for k in range(len(ranges)):
+            #     if results[i][j] < ranges[k]:
+            #         result_str = result_str + index_to_base[k]
+            #         break
 
         list_of_results.append(result_str)
         list_of_truths.append(truth_str)

@@ -165,7 +165,7 @@ def integrate_ori(seqs_dirt):
     for seq_id, seq in seqs_dirt.items():
         X_ori[seq_id] = ordinal_encoder(seq)
     max_len = max(len(seq) for seq in X_ori.values())
-    final_x_ori = np.zeros((len(X_ori), max_len, 4))
+    final_x_ori = np.zeros((len(X_ori), max_len))
     for i, (seq_id, seq) in enumerate(X_ori.items()):
         for j, encoded_str in enumerate(seq):
             final_x_ori[i][j] = encoded_str

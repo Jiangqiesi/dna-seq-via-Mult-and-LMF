@@ -135,25 +135,12 @@ class MULTModel(nn.Module):
             x_q = x_q_tmp.reshape(batch_size, self.qua_dim, self.orig_d_q)
 
         # TODO: 可能有些地方要改，比如是否要先LMF再转置
-        # # 先转置到 [seq_len, batch_size, n_features]
-        # x_c = x_c.transpose(0, 1)
-        # x_q = x_q.transpose(0, 1)   # Dimension (L, N, d_x)
-
-        # 一开始为[batch_size, group_size, seq_len],先转置到[batch_size, seq_len, group_size]
-        x_c = x_c.transpose(1, 2)
-        x_q = x_q.transpose(1, 2)
-
         # 在这里先进行LMF
         # print("Input shape of x_c:", x_c.shape)
         # print("Input shape of x_q:", x_q.shape)
         x_f = self.LMF_f_with_cq(x_c, x_q)  # Dimension (N, d_f)
 
-        # # 转置到 [batch_size, n_features, seq_len]
-        # x_c = F.dropout(x_c.permute(1, 2, 0), p=self.embed_dropout, training=self.training)
-        # x_q = x_q.permute(1, 2, 0)
-
-        # 使其变为[batch_size, n_features, seq_len]
-        x_c = x_c.transpose(1, 2)
+        x_c = F.dropout(x_c.transpose(1, 2), p=self.embed_dropout, training=self.training)
         x_q = x_q.transpose(1, 2)
 
         # Project the textual/visual/audio features
@@ -232,5 +219,6 @@ class MULTModel(nn.Module):
         # print("shape of last_hs_proj:", last_hs_proj.shape)
 
         output = F.sigmoid(self.out_layer(last_hs_proj)) #if False else last_hs
+        # output = output.squeeze(dim=-1)
         # print("output shape:", output.shape)
         return output, last_hs
