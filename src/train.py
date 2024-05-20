@@ -207,7 +207,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         return avg_loss, results, truths
 
     best_valid = 1e8
-    for epoch in range(1, hyp_params.num_epochs + 1):
+    # for epoch in range(1, hyp_params.num_epochs + 1):
+    if False:
         start = time.time()
         train(model, optimizer, criterion)
         val_loss, _, _ = evaluate(model, criterion, test=False)

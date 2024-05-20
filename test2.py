@@ -81,6 +81,16 @@ def one_hot_encode_dna(sequence):
     return one_hot_sequence
 
 
+# 使用顺序编码
+def ordinal_encode(sequence):
+    base_to_index = {'A': 1, 'C': 2, 'G': 3, 'T': 4}
+    ordinal_sequence = np.zeros((len(sequence)))
+    for i, base in enumerate(sequence):
+        if base in base_to_index:
+            ordinal_sequence[i] = base_to_index[base]
+    return ordinal_sequence
+
+
 # 用于质量值的归一化
 def normalize_quality_scores(quality_scores):
     # 将质量值归一化到0-1的范围
@@ -150,11 +160,12 @@ def integrate_data(high_copy_seqs, quals):
 
 def integrate_ori(seqs_dirt):
     X_ori = {}
-    encoded_ori_seqs = {seq_id: [one_hot_encode_dna(seq) for seq in seqs] for seq_id, seqs in seqs_dirt.items()}
+    encoded_ori_seqs = {seq_id: [ordinal_encode(seq) for seq in seqs] for seq_id, seqs in seqs_dirt.items()}
     for seq_id, seq in seqs_dirt.items():
-        X_ori[seq_id] = one_hot_encode_dna(seq)
+        # 使用顺序编码而不是独热编码
+        X_ori[seq_id] = ordinal_encode(seq)
     max_len = max(len(seq) for seq in X_ori.values())
-    final_x_ori = np.zeros((len(X_ori), max_len, 4))
+    final_x_ori = np.zeros((len(X_ori), max_len))
     for i, (seq_id, seq) in enumerate(X_ori.items()):
         for j, encoded_str in enumerate(seq):
             final_x_ori[i][j] = encoded_str

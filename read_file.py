@@ -81,6 +81,16 @@ def one_hot_encode_dna(sequence):
     return one_hot_sequence
 
 
+# 使用顺序编码
+def ordinal_encode(sequence):
+    base_to_index = {'A': 1, 'C': 2, 'G': 3, 'T': 4}
+    ordinal_sequence = np.zeros((len(sequence)))
+    for i, base in enumerate(sequence):
+        if base in base_to_index:
+            ordinal_sequence[i] = base_to_index[base]
+    return ordinal_sequence
+
+
 # 用于质量值的归一化
 def normalize_quality_scores(quality_scores):
     """返回numpy数组"""
@@ -103,8 +113,9 @@ def integrate_data(high_copy_seqs, quals):
 
     # 遍历高拷贝序列，将它们和对应的质量分数整合到一起
     for seq_id in high_copy_seqs.keys():
-
-        encoded_seqs = [one_hot_encode_dna(seq) for seq in high_copy_seqs[seq_id]]
+        # 使用顺序编码而不是独热编码
+        # encoded_seqs = [one_hot_encode_dna(seq) for seq in high_copy_seqs[seq_id]]
+        encoded_seqs = [ordinal_encode(seq) for seq in high_copy_seqs[seq_id]]
         # 对每个质量分数进行归一化
         normalized_quals = [normalize_quality_scores(q) for q in quals[seq_id]]
 
@@ -134,7 +145,8 @@ def integrate_data(high_copy_seqs, quals):
         for i in X_q[id_of_list_q]:
             if len(i) > max_len_q_2:
                 max_len_q_2 = len(i)
-    final_x_c = np.zeros((len(X_c), max_len_c_1, max_len_c_2, 4))
+    # final_x_c = np.zeros((len(X_c), max_len_c_1, max_len_c_2, 4))
+    final_x_c = np.zeros((len(X_c), max_len_c_1, max_len_c_2))
     final_x_q = np.zeros((len(X_q), max_len_q_1, max_len_q_2))
     # for i, (seq_id, seqs) in enumerate(X_c.items()):
     #     # final_x_c[i] = np.concatenate(seqs)
