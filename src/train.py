@@ -99,8 +99,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             # CTC
 
             combined_loss = 0
-            net = nn.DataParallel(model) if batch_size > 10 else model
-            # net = model
+            # net = nn.DataParallel(model) if batch_size > 10 else model
+            net = model
             if batch_chunk > 1:
                 raw_loss = combined_loss = 0
                 seqs_chunks = seqs.chunk(batch_chunk, dim=0)
@@ -211,26 +211,26 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         return avg_loss, results, truths
 
     best_valid = 1e8
-    # for epoch in range(1, hyp_params.num_epochs + 1):
-    #     start = time.time()
-    #     train(model, optimizer, criterion)
-    #     val_loss, _, _ = evaluate(model, criterion, test=False)
-    #     test_loss, _, _ = evaluate(model, criterion, test=True)
-    #
-    #     end = time.time()
-    #     duration = end - start
-    #     scheduler.step(val_loss)  # Decay learning rate by validation loss
-    #
-    #     print("-" * 50)
-    #     print(
-    #         'Epoch {:2d} | Time {:5.4f} sec | Valid Loss {:5.4f} | Test Loss {:5.4f}'.format(epoch, duration, val_loss,
-    #                                                                                          test_loss))
-    #     print("-" * 50)
-    #
-    #     if val_loss < best_valid:
-    #         print(f"Saved model at pre_trained_models/{hyp_params.name}.pt!")
-    #         save_model(hyp_params, model, name=hyp_params.name)
-    #         best_valid = val_loss
+    for epoch in range(1, hyp_params.num_epochs + 1):
+        start = time.time()
+        train(model, optimizer, criterion)
+        val_loss, _, _ = evaluate(model, criterion, test=False)
+        test_loss, _, _ = evaluate(model, criterion, test=True)
+
+        end = time.time()
+        duration = end - start
+        scheduler.step(val_loss)  # Decay learning rate by validation loss
+
+        print("-" * 50)
+        print(
+            'Epoch {:2d} | Time {:5.4f} sec | Valid Loss {:5.4f} | Test Loss {:5.4f}'.format(epoch, duration, val_loss,
+                                                                                             test_loss))
+        print("-" * 50)
+
+        if val_loss < best_valid:
+            print(f"Saved model at pre_trained_models/{hyp_params.name}.pt!")
+            save_model(hyp_params, model, name=hyp_params.name)
+            best_valid = val_loss
 
     model = load_model(hyp_params, name=hyp_params.name)
     # 计算参数数量

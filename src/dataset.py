@@ -103,7 +103,7 @@ class multiseqs_datasets(Dataset):
         return self.n_modalities
 
     def get_group_size(self):
-        return 10
+        return 47
 
     def get_seq_len(self):
         return self.seqs.shape[2], self.quas.shape[2], self.ori_seqs.shape[1]
@@ -118,7 +118,7 @@ class multiseqs_datasets(Dataset):
         # div = int(idx / 47)
         # rem = idx % 47
         if idx <= 13061:
-            x = (idx, self.seqs[idx, :10, :], self.quas[idx, :10, :])
+            x = (idx, self.seqs[idx, :, :], self.quas[idx, :, :])
         else:
             x = (idx, self.seqs[idx, :5, :], self.quas[idx, :5, :])
         y = self.ori_seqs[idx, :]
