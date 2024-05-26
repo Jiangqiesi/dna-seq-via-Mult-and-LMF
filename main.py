@@ -48,14 +48,14 @@ parser.add_argument('--out_dropout', type=float, default=0.0,
 # TODO: 待定nlevels, num_heads
 parser.add_argument('--nlevels', type=int, default=6,
                     help='number of layers in the network (default: 6)')
-parser.add_argument('--num_heads', type=int, default=2,
+parser.add_argument('--num_heads', type=int, default=4,
                     help='number of heads for the transformer network (default: 2)')
 parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: true)')
 
 # Tuning
-parser.add_argument('--batch_size', type=int, default=1, metavar='N',
-                    help='batch size (default: 1)')
+parser.add_argument('--batch_size', type=int, default=16, metavar='N',
+                    help='batch size (default: 16)')
 parser.add_argument('--clip', type=float, default=0.8,
                     help='gradient clip value (default: 0.8)')
 parser.add_argument('--lr', type=float, default=5e-3,

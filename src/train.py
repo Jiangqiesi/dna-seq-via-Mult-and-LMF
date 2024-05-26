@@ -93,7 +93,9 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                         eval_attr = eval_attr.long()
 
             batch_size = seqs.size(0)
-            # print("Batch size:", batch_size)
+            if i_batch < 10:
+                print("Batch:", i_batch)
+                print("Batch size:", batch_size)
             batch_chunk = hyp_params.batch_chunk
 
             # CTC
@@ -144,7 +146,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
             proc_loss += raw_loss.item() * batch_size
             proc_size += batch_size
             epoch_loss += combined_loss.item() * batch_size
-            if i_batch % 24 == 0 and i_batch > 0:
+            if i_batch % (2 * batch_size) == 0 and i_batch > 0:
                 avg_loss = proc_loss / proc_size
                 elapsed_time = time.time() - start_time
                 print('Epoch {:2d} | Batch {:3d}/{:3d} | Time/Batch(ms) {:5.2f} | Train Loss {:5.4f}'.

@@ -6,6 +6,8 @@ from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 from torch.nn.init import xavier_normal
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # use GPU if available, else use CPU
+
 
 class SubNet(nn.Module):
     '''
@@ -60,7 +62,7 @@ class TextSubNet(nn.Module):
             (return value in forward) a tensor of shape (batch_size, out_size)
         '''
         super(TextSubNet, self).__init__()
-        self.rnn = nn.LSTM(in_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=True)
+        self.rnn = nn.LSTM(in_size, hidden_size=hidden_size, num_layers=num_layers, bidirectional=bidirectional, batch_first=False)
         self.dropout = nn.Dropout(dropout)
         # print("hidden_size:", hidden_size, "out_size:", out_size)
         self.linear_1 = nn.Linear(hidden_size, out_size)
@@ -72,9 +74,11 @@ class TextSubNet(nn.Module):
         Args:
             x: tensor of shape (batch_size, sequence_len, in_size)
         '''
-        _, final_states = self.rnn(x)
+        output, final_states = self.rnn(x)
         h = self.dropout(final_states[0].squeeze())
+        # h = self.dropout(output)
         y_1 = self.linear_1(h)  # if self.hidden_size == self.out_size else h
+        # print("TextSubNet output:", y_1.shape)
         return y_1
 
 
@@ -107,7 +111,7 @@ class LMF(nn.Module):
     Low-rank Multimodal Fusion
     '''
 
-    def __init__(self, input_dims, hidden_dims, text_out, dropouts, output_dim, rank, use_softmax=True):
+    def __init__(self, input_dims, hidden_dims, text_out, dropouts, output_dim, rank, use_softmax=False):
         '''
         Args:
             input_dims - a length-3 tuple, contains (audio_dim, video_dim, text_dim)
@@ -135,6 +139,8 @@ class LMF(nn.Module):
         self.seqs_prob = dropouts[0]
         self.quas_prob = dropouts[1]
         self.post_fusion_prob = dropouts[2]
+
+        self.seq_len = 260
 
         # define the pre-fusion subnetworks
         # 子网络的初始化：
@@ -178,6 +184,7 @@ class LMF(nn.Module):
         # text_h = self.text_subnet(text_x)
         # print("seqs_h:", seqs_h.shape)
         batch_size = seqs_h.data.shape[0]
+        seq_len = seqs_h.data.shape[1]
 
         # 低秩多模态融合：
         # 为每种模态的输出附加一个偏置单元（1s），这样可以在融合中包括偏置。
@@ -193,26 +200,33 @@ class LMF(nn.Module):
         # 确保DTYPE正确定义
         DTYPE = torch.float
         # _audio_h = torch.cat((torch.ones(batch_size, 1, dtype=DTYPE), audio_h), dim=1)
-        _seqs_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE), seqs_h), dim=1)
-        _quas_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE), quas_h), dim=1)
+        _seqs_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE).to(device), seqs_h), dim=-1)
+        _quas_h = torch.cat((torch.ones((batch_size, 1), dtype=DTYPE).to(device), quas_h), dim=-1)
         # _text_h = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), text_h), dim=1)
 
-        # print("_seqs_h:", _seqs_h.shape)
-        # print("seqs_factor:", self.seqs_factor.shape)
         fusion_audio = torch.matmul(_seqs_h, self.seqs_factor)
         fusion_video = torch.matmul(_quas_h, self.quas_factor)
         # fusion_text = torch.matmul(_text_h, self.text_factor)
         fusion_zy = fusion_audio * fusion_video  # * fusion_text
-
         # 输出计算：
         # 通过与融合权重矩阵的矩阵乘法（并加上偏置），得到最终的输出张量。
         # 根据use_softmax标志决定是否对输出应用softmax函数。
         # output = torch.sum(fusion_zy, dim=0).squeeze()
         # use linear transformation instead of simple summation, more flexibility
         output = torch.matmul(self.fusion_weights, fusion_zy.permute(1, 0, 2)).squeeze() + self.fusion_bias
-        # print("LMF output:", output.shape)
         output = output.view(-1, self.output_dim)
         if self.use_softmax:
             output = F.softmax(output, dim=-1)
         # print("output:", output.shape)
         return output
+
+#
+# # 测试代码
+# model = LMF((64, 64), (64, 64), 64, (0., 0., 0., 0.), 64, 16)
+# model = model.cuda()
+# input_a = torch.randn(260, 100, 64)
+# input_b = torch.randn(260, 100, 64)
+# input_a = input_a.cuda()
+# input_b = input_b.cuda()
+# output = model(input_a, input_b)
+# print(output.shape)
