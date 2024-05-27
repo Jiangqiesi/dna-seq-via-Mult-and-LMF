@@ -213,52 +213,98 @@ class MULTModel(nn.Module):
         last_hs_proj = last_hs + last_hs_proj
         # print("shape of last_hs_proj:", last_hs_proj.shape)
 
-        output = F.sigmoid(self.out_layer(last_hs_proj)) #if False else last_hs
+        # output = F.sigmoid(self.out_layer(last_hs_proj)) #if False else last_hs
+        output = F.relu(self.out_layer(last_hs_proj))
         # output = output.squeeze(dim=-1)
         # print("output shape:", output.shape)
         return output, last_hs
 
 
-# 测试代码
-# hyp_params = {
-#     'orig_d_c': 4, 'orig_d_q': 1, 'orig_d_f': 4,
-#     'vonly': True, 'aonly': True, 'lonly': True,
-#     'num_heads': 2, 'layers': 6, 'attn_dropout': 0.0, 'attn_dropout_c': 0.0, 'attn_dropout_q': 0.0,
-#     'relu_dropout': 0.0, 'res_dropout': 0.0, 'out_dropout': 0.0, 'embed_dropout': 0.0,
-#     'attn_mask': True, 'rank': 16, 'seq_dim': 260, 'qua_dim': 260,
-#     'batch_size': 24, 'group_size': 10, 'output_dim': 4
-# }
-parser = argparse.ArgumentParser()
-hyp_params = parser.parse_args()
-hyp_params.orig_d_c = 4
-hyp_params.orig_d_q = 1
-hyp_params.orig_d_f = 4
-hyp_params.vonly = True
-hyp_params.aonly = True
-hyp_params.lonly = True
-hyp_params.num_heads = 2
-hyp_params.layers = 6
-hyp_params.attn_dropout = 0.0
-hyp_params.attn_dropout_c = 0.0
-hyp_params.attn_dropout_q = 0.0
-hyp_params.relu_dropout = 0.0
-hyp_params.res_dropout = 0.0
-hyp_params.out_dropout = 0.0
-hyp_params.embed_dropout = 0.0
-hyp_params.attn_mask = True
-hyp_params.rank = 16
-hyp_params.seq_dim = 260
-hyp_params.qua_dim = 260
-hyp_params.batch_size = 12
-hyp_params.group_size = 10
-hyp_params.output_dim = 4
+# # 测试代码
+# # hyp_params = {
+# #     'orig_d_c': 4, 'orig_d_q': 1, 'orig_d_f': 4,
+# #     'vonly': True, 'aonly': True, 'lonly': True,
+# #     'num_heads': 2, 'layers': 6, 'attn_dropout': 0.0, 'attn_dropout_c': 0.0, 'attn_dropout_q': 0.0,
+# #     'relu_dropout': 0.0, 'res_dropout': 0.0, 'out_dropout': 0.0, 'embed_dropout': 0.0,
+# #     'attn_mask': True, 'rank': 16, 'seq_dim': 260, 'qua_dim': 260,
+# #     'batch_size': 24, 'group_size': 10, 'output_dim': 4
+# # }
+# parser = argparse.ArgumentParser()
+# hyp_params = parser.parse_args()
+# hyp_params.orig_d_c = 4
+# hyp_params.orig_d_q = 1
+# hyp_params.orig_d_f = 4
+# hyp_params.vonly = True
+# hyp_params.aonly = True
+# hyp_params.lonly = True
+# hyp_params.num_heads = 2
+# hyp_params.layers = 6
+# hyp_params.attn_dropout = 0.0
+# hyp_params.attn_dropout_c = 0.0
+# hyp_params.attn_dropout_q = 0.0
+# hyp_params.relu_dropout = 0.0
+# hyp_params.res_dropout = 0.0
+# hyp_params.out_dropout = 0.0
+# hyp_params.embed_dropout = 0.0
+# hyp_params.attn_mask = True
+# hyp_params.rank = 16
+# hyp_params.seq_dim = 260
+# hyp_params.qua_dim = 260
+# hyp_params.batch_size = 12
+# hyp_params.group_size = 10
+# hyp_params.output_dim = 4
+#
+# model = MULTModel(hyp_params)
+# model = model.cuda()
+# input_a = torch.randn(hyp_params.batch_size, hyp_params.group_size, hyp_params.seq_dim, 4)
+# input_b = torch.randn(hyp_params.batch_size, hyp_params.group_size, hyp_params.qua_dim, 1)
+# input_a = input_a.cuda()
+# input_b = input_b.cuda()
+# output = model(input_a, input_b)
+# print(f"output[0].shape:{output[0].shape}")
+# print(f"output[1].shape:{output[1].shape}")
 
-model = MULTModel(hyp_params)
-model = model.cuda()
-input_a = torch.randn(hyp_params.batch_size, hyp_params.group_size, hyp_params.seq_dim, 4)
-input_b = torch.randn(hyp_params.batch_size, hyp_params.group_size, hyp_params.qua_dim, 1)
-input_a = input_a.cuda()
-input_b = input_b.cuda()
-output = model(input_a, input_b)
-print(f"output[0].shape:{output[0].shape}")
-print(f"output[1].shape:{output[1].shape}")
+
+class DNASequenceRestorerModel(nn.Module):
+    def __init__(self, seq_length=260, num_copies=10, d_model=128, nhead=8, num_encoder_layers=6, num_decoder_layers=6,
+                 lstm_hidden_size=256, lstm_layers=2):
+        super(DNASequenceRestorerModel, self).__init__()
+        self.embedding = nn.Linear(4, d_model)
+        self.lstm = nn.LSTM(d_model, lstm_hidden_size, num_layers=lstm_layers, batch_first=False)
+        self.transformer = nn.Transformer(lstm_hidden_size, nhead, num_encoder_layers, num_decoder_layers)
+        self.fc_out = nn.Linear(lstm_hidden_size, 4)
+
+    def forward(self, x):
+        # x 形状: (batch_size, num_copies, seq_length, one_hot_dim)
+        batch_size, num_copies, seq_length, one_hot_dim = x.shape
+        x = x.view(batch_size * num_copies, seq_length, one_hot_dim)  # 展平以适应线性层
+        x = self.embedding(x)  # 线性变换
+
+        # 调整形状为 (seq_length, batch_size * num_copies, d_model) 以适应LSTM
+        x = x.permute(1, 0, 2)  # 变换形状为 (seq_length, batch_size * num_copies, d_model)
+
+        # 通过LSTM层
+        x, tmp = self.lstm(x)  # LSTM返回输出和隐藏状态，我们只需要输出
+        # print("tmp shape in lstm:", tmp[0].shape)
+
+        # 恢复形状为 (num_copies, batch_size, seq_length, lstm_hidden_size)
+        x = x.permute(1, 0, 2).view(batch_size, num_copies, seq_length, -1).permute(1, 0, 2, 3)
+
+        # 准备transformer的输入
+        x = x.reshape(num_copies, batch_size * seq_length, -1)
+        src = x  # 源序列
+        tgt = x[:1, :, :]  # 目标序列（初始时用第一个序列作为开始）
+
+        output = self.transformer(src, tgt)
+        output = output.view(seq_length, batch_size, -1)
+        output = self.fc_out(output)  # 最后的线性变换
+        output = output.permute(1, 0, 2)  # 恢复形状为 (batch_size, seq_length, one_hot_dim)
+
+        return output
+
+
+# # 示例使用
+# model = DNASequenceRestorer().cuda()
+# input_tensor = torch.randn(10, 10, 260, 4).cuda()  # 示例数据
+# output_tensor = model(input_tensor)
+# print(output_tensor.shape)  # 应为 (100, 260, 4)

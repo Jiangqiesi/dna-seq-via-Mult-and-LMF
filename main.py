@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description='MOSEI Sentiment Analysis')
 parser.add_argument('-f', default='', type=str)
 
 # Fixed
-parser.add_argument('--model', type=str, default='MulT',
+parser.add_argument('--model', type=str, default='DNASequenceRestorer',
                     help='name of the model to use (Transformer, etc.)')
 
 # Tasks
@@ -160,11 +160,11 @@ hyp_params.dataset = dataset
 hyp_params.when = args.when
 hyp_params.batch_chunk = args.batch_chunk
 hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_data), len(valid_data), len(test_data)
-hyp_params.model = str.upper(args.model.strip())
+hyp_params.model = args.model.strip()
 # hyp_params.output_dim = output_dim_dict.get(dataset, 1)
 hyp_params.output_dim = 4
 # BCELoss, CrossEntropyLoss
-hyp_params.criterion = criterion_dict.get(dataset, 'BCELoss')
+hyp_params.criterion = criterion_dict.get(dataset, 'L1Loss')
 # TODO:修改超参数 注意对应dataset类的函数返回值
 hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_dim()
 print('hyp_params.orig_d_c: {}'.format(hyp_params.orig_d_c))
