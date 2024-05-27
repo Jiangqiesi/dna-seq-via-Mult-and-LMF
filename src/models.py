@@ -182,7 +182,7 @@ class MULTModel(nn.Module):
         # x = x.reshape(num_copies, batch_size * seq_length, -1)
         # src = x  # 源序列
         # tgt = x[:1, :, :]  # 目标序列（初始时用第一个序列作为开始）
-        h_c_with_f = h_c_with_f.reshape(batch_size, num_copies, seq_length, -1).permute(0, 1, 2, 3)
+        h_c_with_f = h_c_with_f.reshape(num_copies, seq_length, batch_size, -1)
         src_c = h_c_with_f.reshape(num_copies, batch_size * seq_length, -1)
         # print(f"src_c shape:{src_c.shape}")
         tat_c = src_c[:1, :, :]  # 目标序列（初始时用第一个序列作为开始）
@@ -194,7 +194,7 @@ class MULTModel(nn.Module):
         # print("last_h_c:", last_h_c.shape)
 
         h_q_with_f = self.trans_q_with_f(proj_x_q, proj_x_f, proj_x_f)
-        h_q_with_f = h_q_with_f.reshape(batch_size, num_copies, seq_length, -1).permute(0, 1, 2, 3)
+        h_q_with_f = h_q_with_f.reshape(num_copies, seq_length, batch_size, -1)
         src_q = h_q_with_f.reshape(num_copies, batch_size * seq_length, -1)
         tat_q = src_q[:1, :, :]  # 目标序列（初始时用第一个序列作为开始）
         h_q = self.transformer(src_q, tat_q)
@@ -219,46 +219,46 @@ class MULTModel(nn.Module):
         return output, last_hs
 
 
-# # 测试代码
-# # hyp_params = {
-# #     'orig_d_c': 4, 'orig_d_q': 1, 'orig_d_f': 4,
-# #     'vonly': True, 'aonly': True, 'lonly': True,
-# #     'num_heads': 2, 'layers': 6, 'attn_dropout': 0.0, 'attn_dropout_c': 0.0, 'attn_dropout_q': 0.0,
-# #     'relu_dropout': 0.0, 'res_dropout': 0.0, 'out_dropout': 0.0, 'embed_dropout': 0.0,
-# #     'attn_mask': True, 'rank': 16, 'seq_dim': 260, 'qua_dim': 260,
-# #     'batch_size': 24, 'group_size': 10, 'output_dim': 4
-# # }
-# parser = argparse.ArgumentParser()
-# hyp_params = parser.parse_args()
-# hyp_params.orig_d_c = 4
-# hyp_params.orig_d_q = 1
-# hyp_params.orig_d_f = 4
-# hyp_params.vonly = True
-# hyp_params.aonly = True
-# hyp_params.lonly = True
-# hyp_params.num_heads = 2
-# hyp_params.layers = 6
-# hyp_params.attn_dropout = 0.0
-# hyp_params.attn_dropout_c = 0.0
-# hyp_params.attn_dropout_q = 0.0
-# hyp_params.relu_dropout = 0.0
-# hyp_params.res_dropout = 0.0
-# hyp_params.out_dropout = 0.0
-# hyp_params.embed_dropout = 0.0
-# hyp_params.attn_mask = True
-# hyp_params.rank = 16
-# hyp_params.seq_dim = 260
-# hyp_params.qua_dim = 260
-# hyp_params.batch_size = 12
-# hyp_params.group_size = 10
-# hyp_params.output_dim = 4
-#
-# model = MULTModel(hyp_params)
-# model = model.cuda()
-# input_a = torch.randn(hyp_params.batch_size, hyp_params.group_size, hyp_params.seq_dim, 4)
-# input_b = torch.randn(hyp_params.batch_size, hyp_params.group_size, hyp_params.qua_dim, 1)
-# input_a = input_a.cuda()
-# input_b = input_b.cuda()
-# output = model(input_a, input_b)
-# print(f"output[0].shape:{output[0].shape}")
-# print(f"output[1].shape:{output[1].shape}")
+# 测试代码
+# hyp_params = {
+#     'orig_d_c': 4, 'orig_d_q': 1, 'orig_d_f': 4,
+#     'vonly': True, 'aonly': True, 'lonly': True,
+#     'num_heads': 2, 'layers': 6, 'attn_dropout': 0.0, 'attn_dropout_c': 0.0, 'attn_dropout_q': 0.0,
+#     'relu_dropout': 0.0, 'res_dropout': 0.0, 'out_dropout': 0.0, 'embed_dropout': 0.0,
+#     'attn_mask': True, 'rank': 16, 'seq_dim': 260, 'qua_dim': 260,
+#     'batch_size': 24, 'group_size': 10, 'output_dim': 4
+# }
+parser = argparse.ArgumentParser()
+hyp_params = parser.parse_args()
+hyp_params.orig_d_c = 4
+hyp_params.orig_d_q = 1
+hyp_params.orig_d_f = 4
+hyp_params.vonly = True
+hyp_params.aonly = True
+hyp_params.lonly = True
+hyp_params.num_heads = 2
+hyp_params.layers = 6
+hyp_params.attn_dropout = 0.0
+hyp_params.attn_dropout_c = 0.0
+hyp_params.attn_dropout_q = 0.0
+hyp_params.relu_dropout = 0.0
+hyp_params.res_dropout = 0.0
+hyp_params.out_dropout = 0.0
+hyp_params.embed_dropout = 0.0
+hyp_params.attn_mask = True
+hyp_params.rank = 16
+hyp_params.seq_dim = 260
+hyp_params.qua_dim = 260
+hyp_params.batch_size = 12
+hyp_params.group_size = 10
+hyp_params.output_dim = 4
+
+model = MULTModel(hyp_params)
+model = model.cuda()
+input_a = torch.randn(hyp_params.batch_size, hyp_params.group_size, hyp_params.seq_dim, 4)
+input_b = torch.randn(hyp_params.batch_size, hyp_params.group_size, hyp_params.qua_dim, 1)
+input_a = input_a.cuda()
+input_b = input_b.cuda()
+output = model(input_a, input_b)
+print(f"output[0].shape:{output[0].shape}")
+print(f"output[1].shape:{output[1].shape}")
