@@ -48,17 +48,17 @@ parser.add_argument('--out_dropout', type=float, default=0.0,
 # TODO: 待定nlevels, num_heads
 parser.add_argument('--nlevels', type=int, default=6,
                     help='number of layers in the network (default: 6)')
-parser.add_argument('--num_heads', type=int, default=2,
+parser.add_argument('--num_heads', type=int, default=8,
                     help='number of heads for the transformer network (default: 2)')
 parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: true)')
 
 # Tuning
-parser.add_argument('--batch_size', type=int, default=1, metavar='N',
-                    help='batch size (default: 1)')
-parser.add_argument('--clip', type=float, default=0.8,
+parser.add_argument('--batch_size', type=int, default=24, metavar='N',
+                    help='batch size (default: 16)')
+parser.add_argument('--clip', type=float, default=0.6,
                     help='gradient clip value (default: 0.8)')
-parser.add_argument('--lr', type=float, default=5e-3,
+parser.add_argument('--lr', type=float, default=5e-4,
                     help='initial learning rate (default: 5e-3)')
 parser.add_argument('--optim', type=str, default='Adam',
                     help='optimizer to use (default: Adam)')
@@ -149,7 +149,7 @@ if not args.aligned:
 ####################################################################
 
 params = dict()
-params['rank'] = [1, 4, 8, 16]
+params['rank'] = [16, 32, 64, 128]
 
 hyp_params = args
 # hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v = train_data.get_dim()
@@ -170,7 +170,7 @@ hyp_params.orig_d_c, hyp_params.orig_d_q, hyp_params.orig_d_f = train_data.get_d
 print('hyp_params.orig_d_c: {}'.format(hyp_params.orig_d_c))
 print('hyp_params.orig_d_q: {}'.format(hyp_params.orig_d_q))
 print('hyp_params.orig_d_f: {}'.format(hyp_params.orig_d_f))
-hyp_params.c_len, hyp_params.q_len, hyp_params.v_len = train_data.get_seq_len()
+hyp_params.c_len, hyp_params.q_len, hyp_params.f_len = train_data.get_seq_len()
 print('hyp_params.c_len: {}'.format(hyp_params.c_len))
 hyp_params.group_size = train_data.get_group_size()
 print('hyp_params.group_size: {}'.format(hyp_params.group_size))
