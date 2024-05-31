@@ -50,6 +50,9 @@ class MULTModel(nn.Module):
 
         output_dim = hyp_params.output_dim  # This is actually not a hyperparameter :-)
 
+        # embedding
+        self.embedding = nn.Embedding(4, self.orig_d_c)
+
         # 一：先LMF
         # 对应参数
         input_dims = (self.orig_d_c, self.orig_d_q)
@@ -93,6 +96,9 @@ class MULTModel(nn.Module):
         # self.proj0_2 = nn.Linear(self.batch_size * 2, self.batch_size * 2)
         # self.proj0 = nn.Linear(self.batch_size * 2, 1)
 
+        self.linear_1 = nn.Linear(combined_dim, 260)
+        self.linear_2 = nn.Linear(260, combined_dim)
+
         # LSTM
         self.lstm = nn.LSTM(combined_dim, hidden_size=combined_dim, num_layers=2, batch_first=True)
 
@@ -133,15 +139,14 @@ class MULTModel(nn.Module):
         # 张量4维时：
         # batch_size可能会变
         # [batch_size, group_size, seq_len, n_features]
-        # (batch_size * seq_length, num_copies, -1)
+        # [batch_size, group_size * seq_len, n_features]
         if len(x_c.size()) == 4:
             batch_size = x_c.size(0)
-            x_c = x_c.permute(0, 2, 1, 3).reshape(batch_size * self.c_len, -1, self.orig_d_c)
-            x_q = x_q.permute(0, 2, 1, 3).reshape(batch_size * self.q_len, -1, self.orig_d_q)
-            # x_c_tmp = x_c.permute(0, 2, 1, 3)
-            # x_q_tmp = x_q.permute(0, 2, 1, 3)
-            # x_c = x_c_tmp.reshape(batch_size, self.seq_dim, self.orig_d_c)
-            # x_q = x_q_tmp.reshape(batch_size, self.qua_dim, self.orig_d_q)
+            # embedding
+            x_c = x_c.argmax(dim=-1)
+            x_c = self.embedding(x_c)
+            x_c = x_c.flatten(start_dim=1, end_dim=2)
+            x_q = x_q.flatten(start_dim=1, end_dim=2)
 
         # TODO: 可能有些地方要改，比如是否要先LMF再转置
         # 在这里先进行LMF
@@ -185,7 +190,7 @@ class MULTModel(nn.Module):
         # print("shape of h_c_with_f:", h_c_with_f.shape)
         h_c = self.trans_c_mem(h_c_with_f)
         # print("shape of h_c:", h_c.shape)
-        last_h_c = h_c[-1]
+        last_h_c = h_c
         # for i in range(0, 5):
         #     print("last_h_c[0][{}]=:{}".format(i, last_h_c[0][i]))
         # print("last_h_c:", last_h_c.shape)
@@ -193,7 +198,7 @@ class MULTModel(nn.Module):
         h_q_with_f = self.trans_q_with_f(proj_x_q, proj_x_f, proj_x_f)
         h_q = self.trans_q_mem(h_q_with_f)
         # print("shape of h_q:", h_q.shape)
-        last_h_q = h_q[-1]
+        last_h_q = h_q
         # for i in range(0, 5):
         #     print("last_h_q[0][{}]=:{}".format(i, last_h_q[0][i]))
         # 聚合和预测
@@ -223,8 +228,11 @@ class MULTModel(nn.Module):
 
         # A residual block
         last_hs = torch.cat([last_h_c, last_h_q], dim=-1)
-        last_hs = last_hs.view(batch_size, self.c_len, -1)
-        last_hs, _ = self.lstm(last_hs)
+        last_hs = self.linear_1(last_hs)
+        last_hs = last_hs.view(batch_size, self.group_size, self.c_len, -1)
+        # 在第二个维度求和
+        last_hs = torch.sum(last_hs, dim=1)
+        last_hs = self.linear_2(last_hs)
 
         last_hs_proj = self.proj2(F.dropout(self.proj1(last_hs), p=self.out_dropout, training=self.training))
         last_hs_proj = last_hs + last_hs_proj
