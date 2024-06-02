@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from modules.transformer import TransformerEncoder
+from modules.transformer import TransformerEncoder, TransformerDecoder
 from modules.LMF import LMF
 
 
@@ -72,6 +72,8 @@ class MULTModel(nn.Module):
         self.proj_q = nn.Conv1d(self.orig_d_q, self.d_q, kernel_size=1, padding=0, bias=False)
         self.proj_f = nn.Conv1d(self.d_f, self.d_f, kernel_size=1, padding=0, bias=False)
 
+        self.conv_dec = nn.Conv1d(self.orig_d_c, self.d_c, kernel_size=1, padding=0, bias=False)
+
         # 2. Crossmodal Attentions
         # lonly --> x_c; aonly  --> x_q
         if self.lonly:
@@ -84,6 +86,16 @@ class MULTModel(nn.Module):
         # TODO:Q: 为什么layers=3
         self.trans_c_mem = self.get_network(self_type='c_mem', layers=3)
         self.trans_q_mem = self.get_network(self_type='q_mem', layers=3)
+
+        # transformer decoder
+        self.trans_dec_c = TransformerDecoder(embed_dim=self.d_c, num_heads=self.num_heads, layers=self.layers,
+                                              attn_dropout=self.attn_dropout, relu_dropout=self.relu_dropout,
+                                              res_dropout=self.res_dropout, embed_dropout=self.embed_dropout,
+                                              attn_mask=self.attn_mask)
+        self.trans_dec_q = TransformerDecoder(embed_dim=self.d_q, num_heads=self.num_heads, layers=self.layers,
+                                              attn_dropout=self.attn_dropout, relu_dropout=self.relu_dropout,
+                                              res_dropout=self.res_dropout, embed_dropout=self.embed_dropout,
+                                              attn_mask=self.attn_mask)
 
         # Projection layers
         # TODO: 待修改
@@ -127,7 +139,7 @@ class MULTModel(nn.Module):
                                   embed_dropout=self.embed_dropout,
                                   attn_mask=self.attn_mask)
 
-    def forward(self, x_c, x_q):
+    def forward(self, x_c, x_q, dec_input):
         """
         text, audio, and vision should have dimension [batch_size, seq_len, n_features]
         输入数据: 输入x_c、x_q应具有维度 [batch_size, seq_len, n_features]。
@@ -145,8 +157,8 @@ class MULTModel(nn.Module):
             # embedding
             x_c = x_c.argmax(dim=-1)
             x_c = self.embedding(x_c)
-            x_c = x_c.flatten(start_dim=1, end_dim=2)
-            x_q = x_q.flatten(start_dim=1, end_dim=2)
+            x_c = x_c.view(batch_size, -1, self.orig_d_c)
+            x_q = x_q.view(batch_size, -1, self.orig_d_q)
 
         # TODO: 可能有些地方要改，比如是否要先LMF再转置
         # 在这里先进行LMF
@@ -182,6 +194,9 @@ class MULTModel(nn.Module):
         # 例如，如果lonly为真，模型将只使用文本信息，但在处理文本信息时，会考虑音频和视觉信息的影响。
         # 融合来自不同模态影响的特征后，再通过一个记忆转换层（如self.trans_l_mem）进行进一步的处理。
         # 我们不根据配置
+        dec_input = dec_input.transpose(1, 2)
+        dec_input = self.conv_dec(dec_input)
+        dec_input = dec_input.permute(2, 0, 1)
         # (group_size, batch_size * seq_length, -1)
         # print("proj x c shape:", proj_x_c.shape)
         # print("proj x q shape:", proj_x_q.shape)
@@ -190,7 +205,8 @@ class MULTModel(nn.Module):
         # print("shape of h_c_with_f:", h_c_with_f.shape)
         h_c = self.trans_c_mem(h_c_with_f)
         # print("shape of h_c:", h_c.shape)
-        last_h_c = h_c
+        last_h_c = self.trans_dec_c(dec_input, h_c)
+        last_h_c = last_h_c.transpose(0, 1)
         # for i in range(0, 5):
         #     print("last_h_c[0][{}]=:{}".format(i, last_h_c[0][i]))
         # print("last_h_c:", last_h_c.shape)
@@ -198,7 +214,8 @@ class MULTModel(nn.Module):
         h_q_with_f = self.trans_q_with_f(proj_x_q, proj_x_f, proj_x_f)
         h_q = self.trans_q_mem(h_q_with_f)
         # print("shape of h_q:", h_q.shape)
-        last_h_q = h_q
+        last_h_q = self.trans_dec_q(dec_input, h_q)
+        last_h_q = last_h_q.transpose(0, 1)
         # for i in range(0, 5):
         #     print("last_h_q[0][{}]=:{}".format(i, last_h_q[0][i]))
         # 聚合和预测
@@ -228,11 +245,11 @@ class MULTModel(nn.Module):
 
         # A residual block
         last_hs = torch.cat([last_h_c, last_h_q], dim=-1)
-        last_hs = self.linear_1(last_hs)
-        last_hs = last_hs.view(batch_size, self.group_size, self.c_len, -1)
-        # 在第二个维度求和
-        last_hs = torch.sum(last_hs, dim=1)
-        last_hs = self.linear_2(last_hs)
+        # last_hs = self.linear_1(last_hs)
+        # last_hs = last_hs.view(batch_size, self.group_size, self.c_len, -1)
+        # # 在第二个维度求和
+        # last_hs = torch.sum(last_hs, dim=1)
+        # last_hs = self.linear_2(last_hs)
 
         last_hs_proj = self.proj2(F.dropout(self.proj1(last_hs), p=self.out_dropout, training=self.training))
         last_hs_proj = last_hs + last_hs_proj

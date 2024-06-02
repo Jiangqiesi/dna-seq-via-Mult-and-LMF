@@ -107,7 +107,7 @@ class LMF(nn.Module):
     Low-rank Multimodal Fusion
     '''
 
-    def __init__(self, input_dims, hidden_dims, text_out, dropouts, output_dim, rank, use_softmax=True):
+    def __init__(self, input_dims, hidden_dims, text_out, dropouts, output_dim, rank, use_softmax=False):
         '''
         Args:
             input_dims - a length-3 tuple, contains (audio_dim, video_dim, text_dim)
