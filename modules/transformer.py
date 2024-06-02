@@ -292,7 +292,7 @@ class TransformerDecoderLayer(nn.Module):
         """
         residual = x
         x = self.maybe_layer_norm(0, x, before=True)
-        mask = buffered_future_mask(x, x_k) if self.attn_mask else None
+        mask = buffered_future_mask(x, x_k)
         x, _ = self.self_attn(query=x, key=x, value=x, attn_mask=mask)
         x = F.dropout(x, p=self.res_dropout, training=self.training)
         x = residual + x

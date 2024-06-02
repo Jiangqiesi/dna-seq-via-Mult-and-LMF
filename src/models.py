@@ -33,6 +33,7 @@ class MULTModel(nn.Module):
         self.out_dropout = hyp_params.out_dropout
         self.embed_dropout = hyp_params.embed_dropout
         self.attn_mask = hyp_params.attn_mask
+        self.attn_mask = False
         self.rank = hyp_params.rank
         self.seq_dim, self.qua_dim = hyp_params.seq_dim, hyp_params.qua_dim
         self.batch_size = hyp_params.batch_size

@@ -51,7 +51,7 @@ parser.add_argument('--nlevels', type=int, default=6,
 parser.add_argument('--num_heads', type=int, default=8,
                     help='number of heads for the transformer network (default: 2)')
 parser.add_argument('--attn_mask', action='store_false',
-                    help='use attention mask for Transformer (default: true)')
+                    help='use attention mask for Transformer (default: false)')
 
 # Tuning
 parser.add_argument('--batch_size', type=int, default=16, metavar='N',

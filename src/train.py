@@ -121,7 +121,7 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                     raw_loss_i.backward()
                 combined_loss = raw_loss
             else:
-                preds, hiddens = net(seqs, quas, eval_attr)
+                preds, hiddens = net(seqs, quas, seqs[:, 0, :])
                 # iemocap不存在
                 if hyp_params.dataset == 'iemocap':
                     preds = preds.view(-1, 2)
