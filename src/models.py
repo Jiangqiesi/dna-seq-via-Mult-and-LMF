@@ -153,13 +153,10 @@ class MULTModel(nn.Module):
         # batch_size可能会变
         # [batch_size, group_size, seq_len, n_features]
         # [batch_size, group_size * seq_len, n_features]
-        if len(x_c.size()) == 4:
-            batch_size = x_c.size(0)
-            # embedding
-            x_c = x_c.argmax(dim=-1)
-            x_c = self.embedding(x_c)
-            x_c = x_c.view(batch_size, -1, self.orig_d_c)
-            x_q = x_q.view(batch_size, -1, self.orig_d_q)
+        batch_size = x_c.size(0)
+        # embedding
+        x_c = x_c.argmax(dim=-1)
+        x_c = self.embedding(x_c)
 
         # TODO: 可能有些地方要改，比如是否要先LMF再转置
         # 在这里先进行LMF
@@ -195,6 +192,9 @@ class MULTModel(nn.Module):
         # 例如，如果lonly为真，模型将只使用文本信息，但在处理文本信息时，会考虑音频和视觉信息的影响。
         # 融合来自不同模态影响的特征后，再通过一个记忆转换层（如self.trans_l_mem）进行进一步的处理。
         # 我们不根据配置
+        dec_input = torch.cat((torch.zeros((batch_size, 1, self.orig_d_c),
+                                           device=dec_input.device, dtype=dec_input.dtype),
+                               dec_input), dim=1)
         dec_input = dec_input.transpose(1, 2)
         dec_input = self.conv_dec(dec_input)
         dec_input = dec_input.permute(2, 0, 1)
@@ -257,6 +257,7 @@ class MULTModel(nn.Module):
         # print("shape of last_hs_proj:", last_hs_proj.shape)
 
         output = F.sigmoid(self.out_layer(last_hs_proj)) #if False else last_hs
+        output = output[:, :-1, :]
         # output = output.squeeze(dim=-1)
         # print("output shape:", output.shape)
         return output, last_hs

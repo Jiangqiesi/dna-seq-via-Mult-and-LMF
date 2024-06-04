@@ -54,7 +54,7 @@ parser.add_argument('--attn_mask', action='store_false',
                     help='use attention mask for Transformer (default: false)')
 
 # Tuning
-parser.add_argument('--batch_size', type=int, default=16, metavar='N',
+parser.add_argument('--batch_size', type=int, default=16*10, metavar='N',
                     help='batch size (default: 16)')
 parser.add_argument('--clip', type=float, default=0.6,
                     help='gradient clip value (default: 0.8)')

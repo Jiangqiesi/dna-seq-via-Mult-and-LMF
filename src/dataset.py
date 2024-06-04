@@ -71,6 +71,11 @@ class multiseqs_datasets(Dataset):
         data3 = os.path.join(dataset_path, data3)
         dataset3 = pickle.load(open(data3, 'rb'))
 
+        # 将原始序列复制10份，拷贝序列取10份，质量值取10份reshape
+        dataset1 = np.tile(dataset1, (10, 1, 1))
+        dataset2 = dataset2[:, :10, :].reshape(-1, 260, 4)
+        dataset3 = dataset3[:, :10, :].reshape(-1, 260)
+
         # # 对顺序编码的dna序列数组归一化处理
         # dataset1 = dataset1 / 4
         # dataset2 = dataset2 / 4
@@ -106,10 +111,10 @@ class multiseqs_datasets(Dataset):
         return 10
 
     def get_seq_len(self):
-        return self.seqs.shape[2], self.quas.shape[2], self.ori_seqs.shape[1]
+        return self.seqs.shape[1], self.quas.shape[1], self.ori_seqs.shape[1]
 
     def get_dim(self):
-        return self.seqs.shape[3], self.quas.shape[3],  self.ori_seqs.shape[2]
+        return self.seqs.shape[2], self.quas.shape[2],  self.ori_seqs.shape[2]
 
     def __len__(self):
         return self.ori_seqs.shape[0]
@@ -118,9 +123,9 @@ class multiseqs_datasets(Dataset):
         # div = int(idx / 47)
         # rem = idx % 47
         if idx <= 13061:
-            x = (idx, self.seqs[idx, :10, :], self.quas[idx, :10, :])
+            x = (idx, self.seqs[idx, :], self.quas[idx, :])
         else:
-            x = (idx, self.seqs[idx, :5, :], self.quas[idx, :5, :])
+            x = (idx, self.seqs[idx, :], self.quas[idx, :])
         y = self.ori_seqs[idx, :]
         return x, y
 

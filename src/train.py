@@ -121,11 +121,14 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                     raw_loss_i.backward()
                 combined_loss = raw_loss
             else:
-                preds, hiddens = net(seqs, quas, seqs[:, 0, :])
+                preds, hiddens = net(seqs, quas, eval_attr)
                 # iemocap不存在
                 if hyp_params.dataset == 'iemocap':
                     preds = preds.view(-1, 2)
                     eval_attr = eval_attr.view(-1)
+                eval_attr_loss = eval_attr.argmax(dim=-1)
+                eval_attr_loss = eval_attr_loss.view(-1)
+                preds_loss = preds.contiguous().view(-1, 4)
                 # print("Predictions shape:", preds.shape)
                 # print("Eval attribute shape:", eval_attr.shape)
                 raw_loss = criterion(preds, eval_attr)
@@ -191,10 +194,13 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
 
                 # net = nn.DataParallel(model) if batch_size > 10 else model
                 net = model
-                preds, _ = net(seqs, quas, seqs[:, 0, :])
+                preds, _ = net(seqs, quas, seqs)
                 if hyp_params.dataset == 'iemocap':
                     preds = preds.view(-1, 2)
                     eval_attr = eval_attr.view(-1)
+                eval_attr_loss = eval_attr.argmax(dim=-1)
+                eval_attr_loss = eval_attr_loss.view(-1)
+                preds_loss = preds.contiguous().view(-1, 4)
                 total_loss += criterion(preds, eval_attr).item() * batch_size
 
                 # Collect the results into dictionary
